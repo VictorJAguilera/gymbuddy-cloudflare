@@ -1,0 +1,8 @@
+name='gymbuddy-pages'
+compatibility_date='2024-09-01'
+pages_build_output_dir='public'
+
+[[d1_databases]]
+binding='DB'
+database_name='gymbuddy-db'
+database_id='REEMPLAZA_CON_TU_DATABASE_ID'
