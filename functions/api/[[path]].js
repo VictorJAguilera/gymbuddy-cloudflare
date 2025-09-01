@@ -1,1 +1,1 @@
-export async function onRequest(){return new Response(JSON.stringify({ok:true}),{headers:{'content-type':'application/json'}})} 
+export async function onRequest({env}){if(!env.DB){return new Response(JSON.stringify({error:"Falta binding D1 'DB'"}),{status:500,headers:{'content-type':'application/json'}})}return new Response(JSON.stringify({ok:true}),{headers:{'content-type':'application/json'}})}
