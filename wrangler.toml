@@ -4,5 +4,5 @@ pages_build_output_dir='public'
 
 [[d1_databases]]
 binding='DB'
-database_name='gymbuddy-db'
-database_id='REEMPLAZA_CON_TU_DATABASE_ID'
+database_name='gymbuddy-db1'
+database_id='b00b0a37-661d-41fa-b9b8-30bae4777af2'
