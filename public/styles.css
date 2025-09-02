@@ -1,0 +1,277 @@
+/* ================================
+   GymBuddy — styles.css (2025)
+   Paleta: negro/grises con acento rojo
+   Móvil primero, UI moderna
+=================================== */
+
+:root{
+  --bg:#0a0b0d;            /* fondo base */
+  --panel:#111217;         /* tarjetas */
+  --panel-2:#15171c;       /* gradiente tarjetas */
+  --text:#f1f5f9;          /* texto principal */
+  --muted:#a5abb3;         /* texto secundario */
+  --accent:#ff2d2d;        /* rojo principal */
+  --accent-2:#ff5050;      /* rojo gradiente */
+  --border:#1e2128;        /* bordes sutiles */
+  --ring:#2b2f37;          /* contornos internos */
+  --success:#29cf72;       /* verde éxitos */
+  --radius-lg:22px;
+  --radius-md:16px;
+  --radius-sm:12px;
+  --shadow-soft: 0 8px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.03);
+}
+
+*{ box-sizing:border-box }
+html,body{ height:100% }
+
+body{
+  margin:0;
+  font-family: "General Sans", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--text);
+  background:
+    radial-gradient(1200px 800px at 80% -10%, rgba(255,45,45,.08), transparent 50%),
+    radial-gradient(900px 700px at -10% 120%, rgba(255,45,45,.06), transparent 40%),
+    var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection{ background: rgba(255,45,45,.25) }
+
+/* Layout principal */
+.app{
+  min-height:100%;
+  padding:18px 16px 110px;
+  max-width:1000px;
+  margin:0 auto;
+}
+
+/* Header “glass” pegado arriba */
+.header{
+  position:sticky;
+  top:0;
+  z-index:10;
+  margin:-18px -16px 14px;
+  padding:14px 16px 10px;
+  background: linear-gradient(180deg, rgba(10,11,13,.85), rgba(10,11,13,.55) 60%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom:1px solid var(--border);
+}
+
+.title-row{ display:flex; align-items:center; gap:12px; justify-content:space-between }
+.app-title{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px }
+.app-sub{ font-size:12px; color:var(--muted) }
+
+/* Botón volver */
+.back-btn{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:10px 12px; border-radius:999px;
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border:1px solid var(--border);
+  color: var(--text);
+  cursor:pointer;
+}
+
+/* Grids responsivos */
+.grid{ display:grid; grid-template-columns:1fr; gap:14px }
+@media (min-width:720px){ .grid{ grid-template-columns:repeat(2,1fr) } }
+@media (min-width:1024px){ .grid{ grid-template-columns:repeat(3,1fr) } }
+
+.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
+.space{ flex:1 }
+
+/* Tarjetas */
+.card{
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border:1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding:16px;
+  box-shadow: var(--shadow-soft);
+}
+.card:hover{ border-color:#2b2f37 }
+
+/* Tarjetas “hero” de portada */
+.hero-grid{ display:grid; gap:14px }
+.hero-card{
+  position:relative; overflow:hidden;
+  border-radius:28px; border:1px solid var(--ring);
+  min-height:220px; display:flex; align-items:flex-end;
+  background:#0b0c0f; box-shadow: var(--shadow-soft);
+}
+.hero-card .bg{
+  position:absolute; inset:0; background-size:cover; background-position:center;
+  filter: saturate(1) brightness(.65);
+  transform: scale(1.03);
+}
+.hero-card .overlay{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,0) 45%, rgba(0,0,0,.6) 100%) }
+.hero-card .label{ position:relative; z-index:2; padding:20px; font-size:24px; font-weight:800; letter-spacing:.2px }
+
+/* Botones */
+.btn{
+  appearance:none; border:none; outline:none; cursor:pointer;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  color:#fff; padding:12px 16px; border-radius:14px;
+  font-weight:800; letter-spacing:.2px;
+  /* sin sombras en botones (petición del usuario) */
+  transition: transform .06s ease, opacity .2s ease, filter .2s ease;
+}
+.btn:active{ transform: translateY(1px) }
+.btn.secondary{
+  background: linear-gradient(180deg, #1a1b20, #17181c);
+  color:#fff; border:1px solid var(--border);
+}
+.btn.ghost{
+  background: transparent; border:1px solid var(--border); color:#e5e7eb;
+}
+.btn.icon{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:44px; height:44px; border-radius:13px; padding:0;
+}
+
+/* Icon buttons */
+.icon-btn{
+  appearance:none; cursor:pointer; padding:9px;
+  border:1px solid var(--border);
+  background: linear-gradient(180deg, #121319, #0d0e13);
+  color:#fff; border-radius:12px;
+}
+.icon-btn.ghost{ background: transparent }
+
+/* Inputs */
+.input, .select, .chips{
+  background: linear-gradient(180deg, #0e0f13, #0a0b0e);
+  color:#fff; border:1px solid var(--border);
+  border-radius:14px; padding:12px 14px; width:100%;
+}
+.input::placeholder{ color:#707579 }
+.input:focus-visible{ outline:2px solid rgba(255,45,45,.35); outline-offset:0 }
+
+/* Chips de filtro */
+.chips{ display:flex; gap:8px; flex-wrap:wrap; padding:8px }
+.chip{
+  border:1px solid var(--border); border-radius:999px;
+  padding:8px 12px; font-size:12px; background:#14161c; color:#c7c7cb; cursor:pointer;
+}
+.chip.active{ background:rgba(255,45,45,.12); border-color:var(--accent) }
+
+/* Ejercicios */
+.exercise-card{ display:flex; gap:12px; align-items:center }
+.exercise-card .info{ flex:1 1 auto }
+.exercise-card img.thumb{
+  width:64px; height:64px; object-fit:cover; border-radius:18px;
+  border:1px solid var(--ring); box-shadow: var(--shadow-soft);
+}
+
+/* Series */
+.sets{ margin-top:12px; display:flex; flex-direction:column; gap:10px }
+.set{
+  display:grid; grid-template-columns: 1fr 1fr auto;
+  gap:10px; align-items:center;
+}
+.set input{
+  background:#0e1014; border:1px solid var(--ring); color:#fff;
+  border-radius:12px; padding:12px 12px; width:100%;
+}
+.set input:focus-visible{ outline:2px solid rgba(255,45,45,.35) }
+
+.small{ font-size:12px; color:var(--muted) }
+
+/* FAB (+) solo en listado de rutinas */
+.fab{
+  position: fixed; left:50%; transform: translateX(-50%);
+  bottom:20px; width:66px; height:66px; border-radius:20px;
+  display:grid; place-items:center; border:none;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  color:#fff; z-index:20; /* sin sombra en botón */
+}
+
+/* Modal */
+.modal{ position:fixed; inset:0; display:grid; place-items:center }
+.modal.hidden{ display:none }
+.modal-backdrop{ position:absolute; inset:0; background: rgba(0,0,0,.65) }
+.modal-card{
+  position:relative; z-index:2;
+  width: min(920px, 96vw); max-height:92vh; overflow:auto;
+  background: linear-gradient(180deg, #101218, #0b0d12);
+  border:1px solid var(--ring); border-radius:24px;
+  box-shadow: var(--shadow-soft);
+}
+.modal-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; border-bottom:1px solid var(--ring)
+}
+.modal-content{ padding:16px }
+
+/* Cabecera de entrenamiento + cronómetro */
+.workout-header{
+  position:sticky; top:0; z-index:10;
+  background: linear-gradient(180deg, rgba(10,11,13,.9), rgba(10,11,13,.55) 60%, transparent);
+  backdrop-filter: blur(10px);
+  margin:-18px -16px 14px;
+  padding:14px 16px 10px;
+  border-bottom:1px solid var(--border);
+}
+.workout-title{ display:flex; align-items:center; gap:10px; font-weight:800 }
+.workout-sub{ font-size:12px; color:var(--muted) }
+
+/* Toggle de set completado */
+.toggle{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:50px; padding:10px; border-radius:14px;
+  border:1px solid var(--ring);
+  background:#14161c; user-select:none; cursor:pointer;
+}
+.toggle .check{ font-weight:900; font-size:14px; line-height:1; color:#808694 }
+.toggle.complete{
+  background: rgba(41, 207, 114, .18);
+  border-color: rgba(41, 207, 114, .45);
+}
+.toggle.complete .check{ color: var(--success) }
+
+/* Navegación lateral de ejercicios (flechas) */
+.exercise-shell{ position:relative }
+.side-nav{
+  position:absolute; top:50%; transform:translateY(-50%);
+  display:flex; align-items:center; justify-content:center;
+  width:48px; height:64px; border-radius:16px;
+  background: linear-gradient(180deg, #121319, #0d0e13);
+  border:1px solid var(--ring);
+}
+.side-nav.left{ left:-10px }
+.side-nav.right{ right:-10px }
+
+/* Progreso + cronómetro */
+.workout-progress{
+  font-size:12px; color:var(--muted);
+  display:flex; flex-direction:column; align-items:flex-end;
+}
+.stopwatch{ font-size:12px; color:#e1e7ef; margin-top:2px }
+
+/* Vacío / CTA */
+.empty{
+  text-align:center; padding:48px 12px;
+  border:1px dashed var(--ring);
+  border-radius: var(--radius-lg);
+  color:var(--muted);
+  background: linear-gradient(180deg, #0d0f14, #0a0c11);
+}
+.empty .cta{ margin-top:12px }
+
+/* Separador seguro para que el FAB no tape contenido */
+.footer-safe{ height:40px }
+
+/* Accesibilidad */
+button:focus-visible, .icon-btn:focus-visible, .fab:focus-visible, .chip:focus-visible{
+  outline:2px solid rgba(255,45,45,.5);
+  outline-offset:2px;
+  border-radius:14px;
+}
+
+/* Scrollbar sutil (soporte Chromium/Edge) */
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar{ width:10px; height:10px }
+  ::-webkit-scrollbar-track{ background:#0b0d12 }
+  ::-webkit-scrollbar-thumb{ background:#1c2027; border-radius:12px; border:2px solid #0b0d12 }
+  ::-webkit-scrollbar-thumb:hover{ background:#242a33 }
+}
