@@ -1,24 +1,37 @@
 /* ================================
    GymBuddy — styles.css (2025)
-   Paleta: negro/grises con acento rojo
+   Paleta: gris muy oscuro + acento amarillo (#FAE750)
    Móvil primero, UI moderna
+   Sin sombras en botones
 =================================== */
 
+/* -------- Paleta / Tokens -------- */
 :root{
-  --bg:#0a0b0d;            /* fondo base */
-  --panel:#111217;         /* tarjetas */
-  --panel-2:#15171c;       /* gradiente tarjetas */
-  --text:#f1f5f9;          /* texto principal */
-  --muted:#a5abb3;         /* texto secundario */
-  --accent:#ff2d2d;        /* rojo principal */
-  --accent-2:#ff5050;      /* rojo gradiente */
-  --border:#1e2128;        /* bordes sutiles */
-  --ring:#2b2f37;          /* contornos internos */
-  --success:#29cf72;       /* verde éxitos */
+  /* Base */
+  --bg:#111214;           /* fondo base (gris muy oscuro) */
+  --panel:#15171A;        /* tarjetas base */
+  --panel-2:#1B1E24;      /* tarjetas (gradiente) */
+  --text:#F4F7FA;         /* texto principal */
+  --muted:#9CA3AF;        /* texto secundario */
+  --border:#232732;       /* bordes sutiles */
+  --ring:#2C3240;         /* contornos internos */
+
+  /* Acentos (amarillos) */
+  --accent:#FAE750;       /* amarillo principal */
+  --accent-2:#EAD63F;     /* segunda parada para degradado */
+  --accent-3:#FFF489;     /* highlight puntual */
+  --accent-soft:rgba(250,231,80,.18); /* superficies suaves */
+  --accent-line:rgba(250,231,80,.45); /* bordes suaves */
+
+  /* Estados */
+  --success:#29CF72;      /* verde éxito */
+  --danger:#FF5C5C;       /* rojo para acciones destructivas */
+
+  /* Tipografía y radios/sombras */
   --radius-lg:22px;
   --radius-md:16px;
   --radius-sm:12px;
-  --shadow-soft: 0 8px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.03);
+  --shadow-soft:0 8px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
 }
 
 *{ box-sizing:border-box }
@@ -29,17 +42,17 @@ body{
   font-family: "General Sans", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   color: var(--text);
   background:
-    radial-gradient(1200px 800px at 80% -10%, rgba(255,45,45,.08), transparent 50%),
-    radial-gradient(900px 700px at -10% 120%, rgba(255,45,45,.06), transparent 40%),
+    radial-gradient(1100px 700px at 80% -10%, rgba(250,231,80,.06), transparent 50%),
+    radial-gradient(800px 600px at -10% 120%, rgba(250,231,80,.05), transparent 40%),
     var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
 }
 
-::selection{ background: rgba(255,45,45,.25) }
+::selection{ background: rgba(250,231,80,.25) }
 
-/* Layout principal */
+/* -------- Layout principal -------- */
 .app{
   min-height:100%;
   padding:18px 16px 110px;
@@ -47,18 +60,17 @@ body{
   margin:0 auto;
 }
 
-/* Header “glass” pegado arriba */
+/* -------- Header “glass” pegado arriba -------- */
 .header{
   position:sticky;
   top:0;
   z-index:10;
   margin:-18px -16px 14px;
   padding:14px 16px 10px;
-  background: linear-gradient(180deg, rgba(10,11,13,.85), rgba(10,11,13,.55) 60%, transparent);
+  background: linear-gradient(180deg, rgba(17,18,20,.9), rgba(17,18,20,.55) 60%, transparent);
   backdrop-filter: blur(10px);
   border-bottom:1px solid var(--border);
 }
-
 .title-row{ display:flex; align-items:center; gap:12px; justify-content:space-between }
 .app-title{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px }
 .app-sub{ font-size:12px; color:var(--muted) }
@@ -71,9 +83,12 @@ body{
   border:1px solid var(--border);
   color: var(--text);
   cursor:pointer;
+  transition:transform .06s ease, border-color .2s;
 }
+.back-btn:active{ transform: translateY(1px) }
+.back-btn:hover{ border-color:#313746 }
 
-/* Grids responsivos */
+/* -------- Grids responsivos -------- */
 .grid{ display:grid; grid-template-columns:1fr; gap:14px }
 @media (min-width:720px){ .grid{ grid-template-columns:repeat(2,1fr) } }
 @media (min-width:1024px){ .grid{ grid-template-columns:repeat(3,1fr) } }
@@ -81,48 +96,61 @@ body{
 .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
 .space{ flex:1 }
 
-/* Tarjetas */
+/* -------- Tarjetas -------- */
 .card{
   background: linear-gradient(180deg, var(--panel), var(--panel-2));
   border:1px solid var(--border);
   border-radius: var(--radius-lg);
   padding:16px;
   box-shadow: var(--shadow-soft);
+  transition: border-color .2s ease;
 }
-.card:hover{ border-color:#2b2f37 }
+.card:hover{ border-color:#323848 }
 
-/* Tarjetas “hero” de portada */
+/* Etiqueta kbd pequeña */
+.kbd{
+  font-size:11px;
+  border:1px solid var(--border);
+  padding:2px 6px;
+  border-radius:8px;
+  background:#0F1116;
+  color:#E6E9EF;
+}
+
+/* -------- Tarjetas “hero” de portada -------- */
 .hero-grid{ display:grid; gap:14px }
 .hero-card{
   position:relative; overflow:hidden;
-  border-radius:28px; border:1px solid var(--ring);
+  border-radius:28px; border:1px solid #2A3040;
   min-height:220px; display:flex; align-items:flex-end;
-  background:#0b0c0f; box-shadow: var(--shadow-soft);
+  background:#101216; box-shadow: var(--shadow-soft);
 }
 .hero-card .bg{
   position:absolute; inset:0; background-size:cover; background-position:center;
-  filter: saturate(1) brightness(.65);
+  filter: saturate(1) brightness(.7);
   transform: scale(1.03);
 }
-.hero-card .overlay{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,0) 45%, rgba(0,0,0,.6) 100%) }
+.hero-card .overlay{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.0) 45%, rgba(0,0,0,.65) 100%) }
 .hero-card .label{ position:relative; z-index:2; padding:20px; font-size:24px; font-weight:800; letter-spacing:.2px }
 
-/* Botones */
+/* -------- Botones -------- */
 .btn{
   appearance:none; border:none; outline:none; cursor:pointer;
   background: linear-gradient(180deg, var(--accent), var(--accent-2));
-  color:#fff; padding:12px 16px; border-radius:14px;
+  color:#1A1B1E;
+  padding:12px 16px; border-radius:14px;
   font-weight:800; letter-spacing:.2px;
-  /* sin sombras en botones (petición del usuario) */
+  /* SIN sombras en botones (petición) */
   transition: transform .06s ease, opacity .2s ease, filter .2s ease;
 }
 .btn:active{ transform: translateY(1px) }
+.btn:hover{ filter: brightness(1.02) }
 .btn.secondary{
-  background: linear-gradient(180deg, #1a1b20, #17181c);
-  color:#fff; border:1px solid var(--border);
+  background: linear-gradient(180deg, #17191F, #14161B);
+  color:#F1F5F9; border:1px solid var(--border);
 }
 .btn.ghost{
-  background: transparent; border:1px solid var(--border); color:#e5e7eb;
+  background: transparent; border:1px solid var(--border); color:#E5E7EB;
 }
 .btn.icon{
   display:inline-flex; align-items:center; justify-content:center;
@@ -135,27 +163,38 @@ body{
   border:1px solid var(--border);
   background: linear-gradient(180deg, #121319, #0d0e13);
   color:#fff; border-radius:12px;
+  transition:border-color .2s ease, transform .06s ease;
 }
+.icon-btn:active{ transform: translateY(1px) }
+.icon-btn:hover{ border-color:#343A4B }
 .icon-btn.ghost{ background: transparent }
 
-/* Inputs */
+/* -------- Inputs -------- */
 .input, .select, .chips{
-  background: linear-gradient(180deg, #0e0f13, #0a0b0e);
-  color:#fff; border:1px solid var(--border);
+  background: linear-gradient(180deg, #0F1115, #0C0E12);
+  color:#F5F7FB; border:1px solid var(--border);
   border-radius:14px; padding:12px 14px; width:100%;
 }
 .input::placeholder{ color:#707579 }
-.input:focus-visible{ outline:2px solid rgba(255,45,45,.35); outline-offset:0 }
+.input:focus-visible{ outline:2px solid var(--accent-line); outline-offset:0 }
+
+.select{ appearance:none }
 
 /* Chips de filtro */
 .chips{ display:flex; gap:8px; flex-wrap:wrap; padding:8px }
 .chip{
   border:1px solid var(--border); border-radius:999px;
   padding:8px 12px; font-size:12px; background:#14161c; color:#c7c7cb; cursor:pointer;
+  transition: border-color .2s ease, background .2s ease;
 }
-.chip.active{ background:rgba(255,45,45,.12); border-color:var(--accent) }
+.chip:hover{ border-color:#33394A }
+.chip.active{
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color:#F5EFA6;
+}
 
-/* Ejercicios */
+/* -------- Ejercicios -------- */
 .exercise-card{ display:flex; gap:12px; align-items:center }
 .exercise-card .info{ flex:1 1 auto }
 .exercise-card img.thumb{
@@ -163,30 +202,31 @@ body{
   border:1px solid var(--ring); box-shadow: var(--shadow-soft);
 }
 
-/* Series */
+/* -------- Series -------- */
 .sets{ margin-top:12px; display:flex; flex-direction:column; gap:10px }
 .set{
   display:grid; grid-template-columns: 1fr 1fr auto;
   gap:10px; align-items:center;
 }
 .set input{
-  background:#0e1014; border:1px solid var(--ring); color:#fff;
+  background:#0F1217; border:1px solid var(--ring); color:#F5F7FB;
   border-radius:12px; padding:12px 12px; width:100%;
 }
-.set input:focus-visible{ outline:2px solid rgba(255,45,45,.35) }
+.set input::placeholder{ color:#798191 }
+.set input:focus-visible{ outline:2px solid var(--accent-line) }
 
 .small{ font-size:12px; color:var(--muted) }
 
-/* FAB (+) solo en listado de rutinas */
+/* -------- FAB (+) solo en listado de rutinas -------- */
 .fab{
   position: fixed; left:50%; transform: translateX(-50%);
   bottom:20px; width:66px; height:66px; border-radius:20px;
   display:grid; place-items:center; border:none;
   background: linear-gradient(180deg, var(--accent), var(--accent-2));
-  color:#fff; z-index:20; /* sin sombra en botón */
+  color:#1F2126; z-index:20;
 }
 
-/* Modal */
+/* -------- Modal -------- */
 .modal{ position:fixed; inset:0; display:grid; place-items:center }
 .modal.hidden{ display:none }
 .modal-backdrop{ position:absolute; inset:0; background: rgba(0,0,0,.65) }
@@ -203,10 +243,10 @@ body{
 }
 .modal-content{ padding:16px }
 
-/* Cabecera de entrenamiento + cronómetro */
+/* -------- Cabecera de entrenamiento + cronómetro -------- */
 .workout-header{
   position:sticky; top:0; z-index:10;
-  background: linear-gradient(180deg, rgba(10,11,13,.9), rgba(10,11,13,.55) 60%, transparent);
+  background: linear-gradient(180deg, rgba(17,18,20,.9), rgba(17,18,20,.55) 60%, transparent);
   backdrop-filter: blur(10px);
   margin:-18px -16px 14px;
   padding:14px 16px 10px;
@@ -215,19 +255,20 @@ body{
 .workout-title{ display:flex; align-items:center; gap:10px; font-weight:800 }
 .workout-sub{ font-size:12px; color:var(--muted) }
 
-/* Toggle de set completado */
+/* Toggle de set completado (gris → amarillo suave al completar) */
 .toggle{
   display:inline-flex; align-items:center; justify-content:center;
   width:50px; padding:10px; border-radius:14px;
   border:1px solid var(--ring);
-  background:#14161c; user-select:none; cursor:pointer;
+  background:#171A20; user-select:none; cursor:pointer;
+  transition: background .2s ease, border-color .2s ease;
 }
 .toggle .check{ font-weight:900; font-size:14px; line-height:1; color:#808694 }
 .toggle.complete{
-  background: rgba(41, 207, 114, .18);
-  border-color: rgba(41, 207, 114, .45);
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
 }
-.toggle.complete .check{ color: var(--success) }
+.toggle.complete .check{ color:#E5D64A }
 
 /* Navegación lateral de ejercicios (flechas) */
 .exercise-shell{ position:relative }
@@ -237,18 +278,21 @@ body{
   width:48px; height:64px; border-radius:16px;
   background: linear-gradient(180deg, #121319, #0d0e13);
   border:1px solid var(--ring);
+  transition: border-color .2s ease, transform .06s ease;
 }
 .side-nav.left{ left:-10px }
 .side-nav.right{ right:-10px }
+.side-nav:active{ transform: translateY(-50%) scale(.98) }
+.side-nav:hover{ border-color:#343A4B }
 
 /* Progreso + cronómetro */
 .workout-progress{
   font-size:12px; color:var(--muted);
   display:flex; flex-direction:column; align-items:flex-end;
 }
-.stopwatch{ font-size:12px; color:#e1e7ef; margin-top:2px }
+.stopwatch{ font-size:12px; color:#F3F4F8; margin-top:2px }
 
-/* Vacío / CTA */
+/* -------- Vacío / CTA -------- */
 .empty{
   text-align:center; padding:48px 12px;
   border:1px dashed var(--ring);
@@ -261,17 +305,64 @@ body{
 /* Separador seguro para que el FAB no tape contenido */
 .footer-safe{ height:40px }
 
-/* Accesibilidad */
-button:focus-visible, .icon-btn:focus-visible, .fab:focus-visible, .chip:focus-visible{
-  outline:2px solid rgba(255,45,45,.5);
+/* -------- Accesibilidad -------- */
+button:focus-visible, .icon-btn:focus-visible, .fab:focus-visible, .chip:focus-visible, .input:focus-visible{
+  outline:2px solid var(--accent-line);
   outline-offset:2px;
   border-radius:14px;
 }
 
-/* Scrollbar sutil (soporte Chromium/Edge) */
+/* -------- Transiciones útiles -------- */
+a, button, .chip, .card, .icon-btn, .fab{ transition: filter .2s ease, border-color .2s ease }
+
+/* -------- Scrollbar sutil (Chromium/WebKit) -------- */
 @supports selector(::-webkit-scrollbar) {
   ::-webkit-scrollbar{ width:10px; height:10px }
-  ::-webkit-scrollbar-track{ background:#0b0d12 }
-  ::-webkit-scrollbar-thumb{ background:#1c2027; border-radius:12px; border:2px solid #0b0d12 }
-  ::-webkit-scrollbar-thumb:hover{ background:#242a33 }
+  ::-webkit-scrollbar-track{ background:#0E1014 }
+  ::-webkit-scrollbar-thumb{ background:#232732; border-radius:12px; border:2px solid #0E1014 }
+  ::-webkit-scrollbar-thumb:hover{ background:#2C3240 }
 }
+
+/* -------- Ajustes tipográficos pequeños -------- */
+h1,h2,h3{ margin:0; font-weight:800; letter-spacing:.2px }
+p{ margin:0 0 8px; color:#D9DEE6 }
+label{ display:block; font-size:12px; color:#B5BCC8; margin-bottom:6px }
+
+/* -------- Helpers de espaciado -------- */
+.mt-0{ margin-top:0 } .mt-4{ margin-top:4px } .mt-8{ margin-top:8px } .mt-12{ margin-top:12px } .mt-16{ margin-top:16px }
+.mb-0{ margin-bottom:0 } .mb-4{ margin-bottom:4px } .mb-8{ margin-bottom:8px } .mb-12{ margin-bottom:12px } .mb-16{ margin-bottom:16px }
+
+/* -------- Estados/danger genéricos -------- */
+button.remove, .icon-btn.remove{
+  border-color:#3B2222;
+  background: linear-gradient(180deg, #1A0F0F, #140B0B);
+  color:#FCE2E2;
+}
+button.remove:hover, .icon-btn.remove:hover{
+  border-color:#5C2D2D;
+}
+
+/* -------- Soporte de imágenes sin thumbnail -------- */
+.thumb{
+  display:block;
+  width:64px; height:64px; border-radius:18px;
+  background:#0d0f13; border:1px solid var(--ring);
+  display:grid; place-items:center; color:#B9C0CC;
+}
+
+/* -------- Compat móvil: evita zoom en inputs numéricos -------- */
+input[type="number"]{
+  font-size:16px;
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance: none; margin:0;
+}
+
+/* -------- Animaciones sutiles (opcional) -------- */
+@keyframes fadeIn {
+  from { opacity:0; transform: translateY(6px) }
+  to   { opacity:1; transform: translateY(0) }
+}
+.card, .hero-card, .modal-card { animation: fadeIn .2s ease both }
