@@ -5,9 +5,9 @@ export async function onRequest(context) {
   const { request, env } = context;
 
   // Asegúrate de añadir el binding D1 en Pages:
-  // Settings → Functions → D1 databases → Add binding → name: DB → database: gymbuddy-db1
+  // Settings → Bindings → D1 databases → Add binding → name: DB → database: gymbuddy-db1
   if (!env.DB) {
-    return json({ error: "Falta binding D1 'DB' en Settings → Functions (binding DB → gymbuddy-db1)" }, 500);
+    return json({ error: "Falta binding D1 'DB' en Settings → Bindings (binding DB → gymbuddy-db1)" }, 500);
   }
 
   const url = new URL(request.url);
@@ -16,7 +16,7 @@ export async function onRequest(context) {
   const path = url.pathname.replace(/^\/api\/?/, "");
 
   try {
-    // Autoseed si la tabla de ejercicios está vacía (garantiza onboarding)
+    // Autoseed si hay tabla exercises y está vacía (NO crea tablas aquí)
     await seedIfEmpty(env);
 
     // Healthcheck simple
@@ -293,110 +293,37 @@ function cryptoRandom() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+/**
+ * Siembra ejercicios solo si:
+ *  - la tabla exercises EXISTE y
+ *  - está vacía.
+ * No crea tablas aquí (las crea 001_init.sql).
+ */
 async function seedIfEmpty(env) {
-  // Crea tabla exercises si no existe (por si las migraciones aún no se han aplicado)
-  await env.DB.exec?.(
-    `CREATE TABLE IF NOT EXISTS exercises(
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      image TEXT,
-      bodyPart TEXT,
-      primaryMuscles TEXT,
-      secondaryMuscles TEXT,
-      equipment TEXT,
-      isCustom INTEGER DEFAULT 0
-    );`
-  );
+  let count = 0;
+  try {
+    const row = await env.DB.prepare("SELECT COUNT(*) AS c FROM exercises").first();
+    count = row?.c ?? 0;
+  } catch {
+    // La tabla no existe aún (no se han aplicado migraciones): no hacemos nada.
+    return;
+  }
 
-  const row = await env.DB.prepare("SELECT COUNT(*) AS c FROM exercises").first();
-  if (row && row.c === 0) {
+  if (count === 0) {
     const seed = [
-      [
-        "seed_bench_press",
-        "Bench Press",
-        "https://www.lyfta.app/thumbnails/00251201.jpg",
-        "Chest",
-        "Pectoralis Major Sternal Head",
-        "Deltoid Anterior, Pectoralis Major Clavicular Head, Triceps Brachii",
-        "Barbell",
-        0,
-      ],
-      [
-        "seed_triceps_pushdown",
-        "Triceps Pushdown",
-        "https://www.lyfta.app/thumbnails/02411201.jpg",
-        "Triceps, Upper Arms",
-        "Triceps Brachii",
-        "",
-        "Cable",
-        0,
-      ],
-      [
-        "seed_incline_bench",
-        "Incline Bench Press",
-        "https://www.lyfta.app/thumbnails/03141201.jpg",
-        "Chest",
-        "Pectoralis Major Clavicular Head",
-        "Deltoid Anterior, Triceps Brachii",
-        "Dumbbell",
-        0,
-      ],
-      [
-        "seed_lateral_raise",
-        "Lateral Raise",
-        "https://www.lyfta.app/thumbnails/03341201.jpg",
-        "Shoulders",
-        "Deltoid Lateral",
-        "Deltoid Anterior, Serratus Anterior",
-        "Dumbbell",
-        0,
-      ],
-      [
-        "seed_full_squat",
-        "Full Squat",
-        "https://www.lyfta.app/thumbnails/00431201.jpg",
-        "Quadriceps, Thighs",
-        "Gluteus Maximus, Quadriceps",
-        "Adductor Magnus, Soleus",
-        "Barbell",
-        0,
-      ],
-      [
-        "seed_push_up",
-        "Push-up",
-        "https://www.lyfta.app/thumbnails/00071201.jpg",
-        "Chest",
-        "Pectoralis Major",
-        "Triceps Brachii, Deltoid Anterior, Serratus Anterior, Core",
-        "Body weight",
-        0,
-      ],
-      [
-        "seed_bent_over_row",
-        "Bent Over Row",
-        "https://www.lyfta.app/thumbnails/00271201.jpg",
-        "Back",
-        "Infraspinatus, Latissimus Dorsi, Teres Major, Teres Minor, Trapezius Middle & Upper Fibers",
-        "Brachialis, Brachioradialis, Deltoid Posterior",
-        "Barbell",
-        0,
-      ],
-      [
-        "seed_lat_pulldown",
-        "Bar Lateral Pulldown",
-        "https://www.lyfta.app/thumbnails/02181201.jpg",
-        "Back",
-        "Latissimus Dorsi",
-        "Biceps Brachii, Teres Major, Rhomboids",
-        "Cable",
-        0,
-      ],
+      ["seed_bench_press","Bench Press","https://www.lyfta.app/thumbnails/00251201.jpg","Chest","Pectoralis Major Sternal Head","Deltoid Anterior, Pectoralis Major Clavicular Head, Triceps Brachii","Barbell",0],
+      ["seed_triceps_pushdown","Triceps Pushdown","https://www.lyfta.app/thumbnails/02411201.jpg","Triceps, Upper Arms","Triceps Brachii","","Cable",0],
+      ["seed_incline_bench_press","Incline Bench Press","https://www.lyfta.app/thumbnails/03141201.jpg","Chest","Pectoralis Major Clavicular Head","Deltoid Anterior, Triceps Brachii","Dumbbell",0],
+      ["seed_lateral_raise","Lateral Raise","https://www.lyfta.app/thumbnails/03341201.jpg","Shoulders","Deltoid Lateral","Deltoid Anterior, Serratus Anterior","Dumbbell",0],
+      ["seed_full_squat","Full Squat","https://www.lyfta.app/thumbnails/00431201.jpg","Quadriceps, Thighs","Gluteus Maximus, Quadriceps","Adductor Magnus, Soleus","Barbell",0],
+      ["seed_push_up","Push-up","https://www.lyfta.app/thumbnails/00071201.jpg","Chest","Pectoralis Major","Triceps Brachii, Deltoid Anterior, Serratus Anterior, Core","Body weight",0],
+      ["seed_bent_over_row","Bent Over Row","https://www.lyfta.app/thumbnails/00271201.jpg","Back","Infraspinatus, Latissimus Dorsi, Teres Major, Teres Minor, Trapezius Middle & Upper Fibers","Brachialis, Brachioradialis, Deltoid Posterior","Barbell",0],
+      ["seed_lat_pulldown","Bar Lateral Pulldown","https://www.lyfta.app/thumbnails/02181201.jpg","Back","Latissimus Dorsi","Biceps Brachii, Teres Major, Rhomboids","Cable",0]
     ];
-
     const stmt = env.DB.prepare(
       "INSERT INTO exercises(id,name,image,bodyPart,primaryMuscles,secondaryMuscles,equipment,isCustom) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)"
     );
-    await env.DB.batch(seed.map((v) => stmt.bind(...v)));
+    await env.DB.batch(seed.map(v => stmt.bind(...v)));
   }
 }
 
