@@ -98,7 +98,7 @@ function render(){
   if (STATE.view === Views.MARKS) return renderMarks();
 }
 
-/* HOME */
+/* HOME 
 function renderHome(){
   showFAB(false);
   appEl.innerHTML = ''
@@ -129,7 +129,7 @@ function renderHome(){
   var cm = document.getElementById("card-marks");
   if (cm) cm.addEventListener("click", function(){ go(Views.MARKS); });
 }
-
+*/
 /* ROUTINES LIST */
 function renderRoutines(){
   showFAB(true);
