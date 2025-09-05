@@ -1,4 +1,25 @@
 /* GymBuddy 2025 — Frontend v3 (UI + animaciones exactas) */
+// ---- Failsafe visible en pantalla ----
+(function () {
+  function overlay(msg) {
+    const box = document.createElement('div');
+    box.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:#231;color:#FAE750;padding:10px 12px;font:14px/1.4 ui-sans-serif,system-ui';
+    box.textContent = 'Error: ' + msg;
+    document.body.appendChild(box);
+  }
+  window.addEventListener('error', e => overlay(e.message || 'JS error'));
+  window.addEventListener('unhandledrejection', e => overlay((e.reason && e.reason.message) || String(e.reason)));
+})();
+
+// Si #app no existe, muéstralo explícitamente y corta
+const appEl = document.getElementById('app');
+if (!appEl) {
+  document.body.insertAdjacentHTML('afterbegin','<div style="color:#FAE750;padding:12px;text-align:center;background:#231;">Error: falta <code>#app</code> en index.html</div>');
+  throw new Error('Falta #app en index.html');
+}
+
+
+
 const API = (window.API_BASE || "").replace(/\/+$/, "");
 const Views = { HOME: "home", ROUTINES: "routines", EDIT: "edit", WORKOUT: "workout", MARKS: "marks" };
 
