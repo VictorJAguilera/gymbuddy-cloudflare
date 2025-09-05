@@ -21,6 +21,7 @@ async function api(path, opts = {}) {
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+/* ---------------- Modal ---------------- */
 const modalRoot = document.getElementById("modal-root");
 const modalTitle = document.getElementById("modal-title");
 const modalContent = document.getElementById("modal-content");
@@ -41,35 +42,27 @@ function showModal(title, html, onMount) {
 
   if (typeof onMount === "function") onMount();
 }
-
 function closeModal() {
   modalRoot.classList.add("hidden");
   modalRoot.setAttribute("aria-hidden", "true");
 }
 
+/* ---------------- Utils ---------------- */
 function fmtDate(ts) {
   const d = new Date(ts);
   return d.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
 }
-
 function escapeHtml(str = "") {
   return str.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 }
-
-function showFAB(show) {
-  const fab = document.getElementById("fab-add");
-  if (fab) fab.style.display = show ? "grid" : "none";
-}
-
-function go(view) {
-  STATE.view = view;
-  render();
-}
+function showFAB(show) { const fab = document.getElementById("fab-add"); if (fab) fab.style.display = show ? "grid" : "none"; }
+function go(view) { STATE.view = view; render(); }
 
 const appEl = document.getElementById("app");
 const FAB = document.getElementById("fab-add");
 FAB.addEventListener("click", () => openCreateRoutine());
 
+/* ---------------- Router ---------------- */
 async function render() {
   if (STATE.view === Views.HOME) return renderHome();
   if (STATE.view === Views.ROUTINES) return renderRoutines();
@@ -159,7 +152,6 @@ async function renderRoutines() {
     el.addEventListener("click", () => startWorkout(el.getAttribute("data-play")))
   );
 }
-
 function RoutineCard(r) {
   const totalSets = (r.exercises || []).reduce((acc, e) => acc + e.sets.length, 0);
   return `
@@ -174,7 +166,6 @@ function RoutineCard(r) {
       </div>
       <div class="row" style="gap:8px">
         <button class="btn icon secondary" aria-label="Editar rutina" data-edit="${r.id}" title="Editar (⚙️)">
-          <!-- gear icon -->
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
             <path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2-.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0-.12-.64Z"/>
           </svg>
@@ -186,7 +177,6 @@ function RoutineCard(r) {
     </div>
   </article>`;
 }
-
 function openCreateRoutine() {
   showModal(
     "Nueva rutina",
@@ -281,7 +271,7 @@ function EditExerciseCard(r, x) {
   const ex = x.exercise;
   const img = ex?.image
     ? `<img class="thumb" src="${ex.image}" alt="${escapeHtml(ex.name)}">`
-    : `<div class="thumb" style="width:64px;height:64px;background:#0d0d10;border-radius:18px;border:1px solid var(--ring);display:grid;place-items:center">🏋️</div>`;
+    : `<div class="thumb">🏋️</div>`;
   return `
   <article class="card" data-rex="${x.id}">
     <div class="exercise-card">
@@ -296,8 +286,8 @@ function EditExerciseCard(r, x) {
         .map(
           (s) => `
         <div class="set" data-set="${s.id}">
-          <input class="inp-reps" inputmode="numeric" type="number" min="0" placeholder="reps" value="">
-          <input class="inp-peso" inputmode="decimal" type="number" step="0.5" min="0" placeholder="peso" value="">
+          <input class="inp-reps" inputmode="numeric" type="number" min="0" placeholder="reps" value="${s.reps ?? ""}">
+          <input class="inp-peso" inputmode="decimal" type="number" step="0.5" min="0" placeholder="peso" value="${s.peso ?? ""}">
           <button class="icon-btn remove" aria-label="Eliminar serie">🗑️</button>
         </div>
       `
@@ -310,7 +300,6 @@ function EditExerciseCard(r, x) {
     </div>
   </article>`;
 }
-
 function collectRoutineFromDOM(r) {
   const exCards = $$("article.card[data-rex]");
   const exercises = exCards.map((card) => {
@@ -393,7 +382,7 @@ async function openExercisePicker(routineId, onAfter) {
             ${
               e.image
                 ? `<img class="thumb" src="${e.image}" alt="${escapeHtml(e.name)}">`
-                : `<div class="thumb" style="width:64px;height:64px;background:#0d0d10;border-radius:18px;border:1px solid var(--ring);display:grid;place-items:center">🏋️</div>`
+                : `<div class="thumb">🏋️</div>`
             }
             <div class="info">
               <h3 style="margin:0 0 6px">${escapeHtml(e.name)}</h3>
@@ -437,7 +426,6 @@ async function openExercisePicker(routineId, onAfter) {
     }
   );
 }
-
 function openCreateExerciseForm(onSaved) {
   showModal(
     "Crear ejercicio",
@@ -486,6 +474,7 @@ async function startWorkout(routineId) {
     go(Views.EDIT);
     return;
   }
+  STATE.currentRoutineId = routineId;
   STATE.workoutSession = {
     routineId: r.id,
     startedAt: Date.now(),
@@ -493,6 +482,7 @@ async function startWorkout(routineId) {
     durationSec: 0,
     currentIndex: 0,
     items: r.exercises.map((x) => ({
+      rexId: x.id,                     // <-- para guardar al vuelo
       exerciseId: x.exercise.id,
       name: x.exercise.name,
       image: x.exercise.image,
@@ -513,27 +503,45 @@ function startStopwatch() {
     if (el) el.textContent = fmtDuration(s.durationSec);
   }, 1000);
 }
-
-function stopStopwatch() {
-  if (STATE.stopwatchTimer) {
-    clearInterval(STATE.stopwatchTimer);
-    STATE.stopwatchTimer = null;
-  }
-}
-
+function stopStopwatch() { if (STATE.stopwatchTimer) { clearInterval(STATE.stopwatchTimer); STATE.stopwatchTimer = null; } }
 function fmtDuration(sec) {
-  const h = Math.floor(sec / 3600),
-    m = Math.floor((sec % 3600) / 60),
-    s = sec % 60;
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
   return `${h > 0 ? String(h).padStart(2, "0") + ":" : ""}${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
+function completedSetsCount(sess) { return sess.items.reduce((acc, it) => acc + it.sets.filter((s) => s.done).length, 0); }
+function maxSetsCount(sess) { return sess.items.reduce((acc, it) => acc + it.sets.length, 0) || 1; }
 
-function completedSetsCount(sess) {
-  return sess.items.reduce((acc, it) => acc + it.sets.filter((s) => s.done).length, 0);
-}
+/* Stage helpers */
+function workoutCardHTML(item, idx, total) {
+  return `
+    <article class="card workout-card" data-index="${idx}">
+      <div class="nav-top">
+        ${idx > 0 ? `<button class="nav-btn" id="wo-prev"><svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg> Anterior</button>` : `<span></span>`}
+        <div class="spacer"></div>
+        ${idx < total - 1 ? `<button class="nav-btn" id="wo-next">Siguiente <svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M9 5l7 7-7 7"/></svg></button>` : `<span></span>`}
+      </div>
 
-function maxSetsCount(sess) {
-  return sess.items.reduce((acc, it) => acc + it.sets.length, 0) || 1;
+      <div class="exercise-card">
+        ${ item.image ? `<img class="thumb" src="${item.image}" alt="${escapeHtml(item.name)}">` : `<div class="thumb">🏋️</div>` }
+        <div class="info">
+          <h3 style="margin:0 0 6px">${escapeHtml(item.name)}</h3>
+          <div class="small">${item.bodyPart || ""}</div>
+        </div>
+      </div>
+
+      <div class="sets">
+        ${item.sets.map((s) => `
+          <div class="set">
+            <input inputmode="numeric" type="number" min="0" placeholder="Reps" value="${s.reps ?? ""}" data-reps="${s.id}">
+            <input inputmode="decimal" type="number" step="0.5" min="0" placeholder="Peso (kg)" value="${s.peso ?? ""}" data-peso="${s.id}">
+            <div class="toggle ${s.done ? "complete" : ""}" data-toggle="${s.id}" title="${s.done ? "Completada" : "Incompleta"}">
+              <span class="check">✓</span>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </article>
+  `;
 }
 
 function renderWorkout() {
@@ -553,95 +561,54 @@ function renderWorkout() {
         </button>
         <div>
           <div class="workout-title">Entrenamiento</div>
-          <div class="workout-sub">${idx + 1} de ${total}</div>
+          <div class="workout-sub"><span id="wo-counter">${idx + 1}</span> de <span id="wo-total">${total}</span></div>
         </div>
         <div class="workout-progress">
-          <span>${progress}%</span>
+          <span id="wo-progress">${progress}%</span>
           <span class="stopwatch" id="clock">${fmtDuration(sess.durationSec || 0)}</span>
         </div>
       </div>
     </header>
 
     <section class="grid">
-      <article class="card exercise-shell">
-        ${
-          idx > 0
-            ? `<button class="side-nav left" id="wo-prev" aria-label="Anterior">
-          <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg>
-        </button>`
-            : ""
-        }
-        ${
-          idx < total - 1
-            ? `<button class="side-nav right" id="wo-next" aria-label="Siguiente">
-          <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M9 5l7 7-7 7"/></svg>
-        </button>`
-            : ""
-        }
-        <div class="exercise-card">
-          ${
-            item.image
-              ? `<img class="thumb" src="${item.image}" alt="${escapeHtml(item.name)}">`
-              : `<div class="thumb" style="width:64px;height:64px;background:#0d0d10;border-radius:18px;border:1px solid var(--ring);display:grid;place-items:center">🏋️</div>`
-          }
-          <div class="info">
-            <h3 style="margin:0 0 6px">${escapeHtml(item.name)}</h3>
-            <div class="small">${item.bodyPart || ""}</div>
-          </div>
-        </div>
-        <div class="sets">
-          ${item.sets
-            .map(
-              (s) => `
-            <div class="set">
-              <input inputmode="numeric" type="number" min="0" placeholder="Reps" value="${s.reps ?? ""}" data-reps="${s.id}">
-              <input inputmode="decimal" type="number" step="0.5" min="0" placeholder="Peso (kg)" value="${s.peso ?? ""}" data-peso="${s.id}">
-              <div class="toggle ${s.done ? "complete" : ""}" data-toggle="${s.id}" title="${
-                s.done ? "Completada" : "Incompleta"
-              }">
-                <span class="check">✓</span>
-              </div>
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-      </article>
-
-      ${
-        idx === total - 1
-          ? `
-        <article class="card">
-          <div class="exercise-card">
-            <div class="info">
-              <h3 style="margin:0 0 4px">Último ejercicio listo</h3>
-              <p class="small">Pulsa para finalizar tu sesión</p>
-            </div>
-            <div class="row">
-              <button class="btn" id="wo-finish">Finalizar entrenamiento</button>
-            </div>
-          </div>
-        </article>
-      `
-          : ""
-      }
+      <div id="exercise-stage" class="exercise-shell"></div>
+      <div id="finish-container"></div>
     </section>
   `;
 
-  $("#back-routines-wo").addEventListener("click", () => {
-    go(Views.ROUTINES);
-  });
-  if ($("#wo-prev")) $("#wo-prev").addEventListener("click", () => { sess.currentIndex = Math.max(0, sess.currentIndex - 1); renderWorkout(); });
-  if ($("#wo-next")) $("#wo-next").addEventListener("click", () => { sess.currentIndex = Math.min(sess.items.length - 1, sess.currentIndex + 1); renderWorkout(); });
+  $("#back-routines-wo").addEventListener("click", () => go(Views.ROUTINES));
 
-  item.sets.forEach((s) => {
-    const reps = $(`[data-reps="${s.id}"]`);
-    const peso = $(`[data-peso="${s.id}"]`);
-    const tog = $(`[data-toggle="${s.id}"]`);
-    if (reps) reps.addEventListener("input", (ev) => { s.reps = ev.target.value === "" ? null : parseInt(ev.target.value, 10); });
-    if (peso) peso.addEventListener("input", (ev) => { s.peso = ev.target.value === "" ? null : parseFloat(ev.target.value); });
-    if (tog) tog.addEventListener("click", () => { s.done = !s.done; renderWorkout(); });
-  });
+  // Primera tarjeta sin animación
+  const stage = $("#exercise-stage");
+  stage.innerHTML = workoutCardHTML(item, idx, total);
+  attachWorkoutHandlers(stage.firstElementChild, item);
+
+  updateFinishCard();
+}
+
+function updateWorkoutHeader() {
+  const s = STATE.workoutSession;
+  const progress = Math.round((100 * completedSetsCount(s)) / Math.max(1, maxSetsCount(s)));
+  const counter = $("#wo-counter"); if (counter) counter.textContent = String(s.currentIndex + 1);
+  const prog = $("#wo-progress"); if (prog) prog.textContent = `${progress}%`;
+}
+
+function updateFinishCard() {
+  const s = STATE.workoutSession;
+  const total = s.items.length;
+  const idx = s.currentIndex;
+  const cont = $("#finish-container");
+  cont.innerHTML = idx === total - 1 ? `
+    <article class="card">
+      <div class="exercise-card">
+        <div class="info">
+          <h3 style="margin:0 0 4px">Último ejercicio listo</h3>
+          <p class="small">Pulsa para finalizar tu sesión</p>
+        </div>
+        <div class="row"><button class="btn" id="wo-finish">Finalizar entrenamiento</button></div>
+      </div>
+    </article>
+  ` : "";
 
   const fin = $("#wo-finish");
   if (fin) fin.addEventListener("click", () => {
@@ -686,6 +653,91 @@ function renderWorkout() {
   });
 }
 
+/* Swap de tarjeta con animación y re-binding de handlers */
+function navigateWorkout(dir) {
+  const s = STATE.workoutSession;
+  const oldIdx = s.currentIndex;
+  const newIdx = dir === "next" ? Math.min(s.items.length - 1, oldIdx + 1) : Math.max(0, oldIdx - 1);
+  if (newIdx === oldIdx) return;
+
+  const stage = $("#exercise-stage");
+  const oldEl = stage.firstElementChild;
+  if (!oldEl) return;
+
+  const outClass = dir === "next" ? "slide-exit-left" : "slide-exit-right";
+  oldEl.classList.add(outClass);
+
+  const item = s.items[newIdx];
+  const temp = document.createElement("div");
+  temp.innerHTML = workoutCardHTML(item, newIdx, s.items.length);
+  const newEl = temp.firstElementChild;
+  const inClass = dir === "next" ? "slide-enter-right" : "slide-enter-left";
+  newEl.classList.add(inClass);
+  stage.appendChild(newEl);
+
+  const onDone = () => {
+    oldEl.remove();
+    s.currentIndex = newIdx;
+    updateWorkoutHeader();
+    updateFinishCard();
+    attachWorkoutHandlers(newEl, item);
+  };
+  newEl.addEventListener("animationend", onDone, { once: true });
+}
+
+/* Persistencia rápida del set (PUT granular) */
+const debounceMap = new Map();
+function debounce(fn, key, wait = 300) {
+  clearTimeout(debounceMap.get(key));
+  const t = setTimeout(fn, wait);
+  debounceMap.set(key, t);
+}
+function persistSet(rexId, setId, reps, peso) {
+  const rid = STATE.currentRoutineId;
+  const body = { exercises: [{ id: rexId, sets: [{ id: setId, reps, peso }] }] };
+  return api(`/api/routines/${rid}`, { method: "PUT", body: JSON.stringify(body) }).catch(() => {});
+}
+
+/* Añade listeners a inputs/toggles de una tarjeta */
+function attachWorkoutHandlers(cardEl, item) {
+  const s = STATE.workoutSession;
+
+  const prev = cardEl.querySelector("#wo-prev");
+  const next = cardEl.querySelector("#wo-next");
+  if (prev) prev.addEventListener("click", () => navigateWorkout("prev"));
+  if (next) next.addEventListener("click", () => navigateWorkout("next"));
+
+  // Inputs: actualizan modelo y guardan al vuelo (debounced)
+  item.sets.forEach((st) => {
+    const reps = cardEl.querySelector(`[data-reps="${st.id}"]`);
+    const peso = cardEl.querySelector(`[data-peso="${st.id}"]`);
+    const tog  = cardEl.querySelector(`[data-toggle="${st.id}"]`);
+    if (reps) reps.addEventListener("input", (ev) => {
+      st.reps = ev.target.value === "" ? null : parseInt(ev.target.value, 10);
+      debounce(() => persistSet(item.rexId, st.id, st.reps, st.peso), `reps:${st.id}`);
+    });
+    if (peso) peso.addEventListener("input", (ev) => {
+      st.peso = ev.target.value === "" ? null : parseFloat(ev.target.value);
+      debounce(() => persistSet(item.rexId, st.id, st.reps, st.peso), `peso:${st.id}`);
+    });
+    if (tog) tog.addEventListener("click", () => {
+      st.done = !st.done;
+      tog.classList.toggle("complete", st.done);
+      checkAutoNext(s, item);
+      updateWorkoutHeader();
+    });
+  });
+}
+
+/* Auto-siguiente: si todas las series del ejercicio están completas, pasa al siguiente */
+function checkAutoNext(sess, item) {
+  const allDone = item.sets.length > 0 && item.sets.every((x) => x.done);
+  const last = sess.currentIndex === sess.items.length - 1;
+  if (allDone && !last) {
+    setTimeout(() => navigateWorkout("next"), 220);
+  }
+}
+
 /* ---------- MARKS ---------- */
 async function renderMarks() {
   showFAB(false);
@@ -710,16 +762,10 @@ async function renderMarks() {
         <p>Cuando completes entrenamientos, verás aquí tus mejores pesos.</p>
       </div>`
         : `<section class="grid">
-        ${marks
-          .map(
-            (m) => `
+        ${marks.map((m) => `
           <article class="card">
             <div class="exercise-card">
-              ${
-                m.image
-                  ? `<img class="thumb" src="${m.image}" alt="${escapeHtml(m.name)}">`
-                  : `<div class="thumb" style="width:64px;height:64px;background:#0d0d10;border-radius:18px;border:1px solid var(--ring);display:grid;place-items:center">🏋️</div>`
-              }
+              ${m.image ? `<img class="thumb" src="${m.image}" alt="${escapeHtml(m.name)}">` : `<div class="thumb">🏋️</div>`}
               <div class="info">
                 <h3 style="margin:0 0 4px">${escapeHtml(m.name)}</h3>
                 <div class="small">${m.bodyPart || ""}</div>
@@ -727,9 +773,7 @@ async function renderMarks() {
               </div>
             </div>
           </article>
-        `
-          )
-          .join("")}
+        `).join("")}
       </section>`
     }
   `;
@@ -738,3 +782,4 @@ async function renderMarks() {
 
 /* ---------- Arranque ---------- */
 render();
+
