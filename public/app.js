@@ -82,15 +82,30 @@ function showFAB(show){
 }
 function go(view){ STATE.view = view; render(); }
 
-var appEl = document.getElementById("app");
-if (!appEl) {
-  document.body.insertAdjacentHTML('afterbegin','<div style="color:#FAE750;padding:12px;text-align:center;background:#231;">Error: falta <code>#app</code> en index.html</div>');
-  throw new Error("Falta #app en index.html");
-}
-var FAB = document.getElementById("fab-add");
-if (FAB) FAB.addEventListener("click", function(){ openCreateRoutine(); });
+var appEl;
 
-function render(){
+function boot() {
+  appEl = document.getElementById("app");
+  if (!appEl) {
+    // Muestra aviso cuando <body> exista, sin romper la ejecución
+    var timer = setInterval(function () {
+      if (document.body) {
+        clearInterval(timer);
+        document.body.insertAdjacentHTML(
+          "afterbegin",
+          '<div style="color:#FAE750;padding:12px;text-align:center;background:#231;">Error: falta <code>#app</code> en index.html</div>'
+        );
+      }
+    }, 50);
+    return; // no sigas si no existe #app
+  }
+
+  var FAB = document.getElementById("fab-add");
+  if (FAB) FAB.addEventListener("click", function(){ openCreateRoutine(); });
+
+  render(); // ahora sí, pinta la HOME
+}
+{
   if (STATE.view === Views.HOME) return renderHome();
   if (STATE.view === Views.ROUTINES) return renderRoutines();
   if (STATE.view === Views.EDIT) return renderEditRoutine(STATE.currentRoutineId);
@@ -98,7 +113,7 @@ function render(){
   if (STATE.view === Views.MARKS) return renderMarks();
 }
 
-/* HOME 
+/* HOME */
 function renderHome(){
   showFAB(false);
   appEl.innerHTML = ''
@@ -129,7 +144,7 @@ function renderHome(){
   var cm = document.getElementById("card-marks");
   if (cm) cm.addEventListener("click", function(){ go(Views.MARKS); });
 }
-*/
+
 /* ROUTINES LIST */
 function renderRoutines(){
   showFAB(true);
