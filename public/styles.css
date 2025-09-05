@@ -1,37 +1,33 @@
 /* ================================
-   GymBuddy — styles.css (2025 v2)
+   GymBuddy — styles.css (2025 v3)
    Paleta: gris muy oscuro + amarillo (#FAE750)
    Estética moderna, móvil primero
    Sin sombras en botones
 =================================== */
 
-/* -------- Tokens de diseño -------- */
+/* -------- Tokens -------- */
 :root{
-  /* Base */
-  --bg:#111214;           /* fondo base (gris muy oscuro) */
-  --panel:#15171A;        /* tarjetas base */
-  --panel-2:#1B1E24;      /* tarjetas (gradiente sutil) */
-  --text:#F4F7FA;         /* texto principal */
-  --muted:#9CA3AF;        /* texto secundario */
-  --border:#232732;       /* bordes sutiles */
-  --ring:#2C3240;         /* contornos internos */
+  --bg:#111214;
+  --panel:#15171A;
+  --panel-2:#1B1E24;
+  --text:#F5F7FA;
+  --muted:#A5ADBB;
+  --border:#232732;
+  --ring:#2C3240;
 
-  /* Acentos (amarillos) */
-  --accent:#FAE750;       /* amarillo principal */
-  --accent-2:#EAD63F;     /* para degradado */
-  --accent-3:#FFF489;     /* highlight puntual */
-  --accent-soft:rgba(250,231,80,.18);
-  --accent-line:rgba(250,231,80,.45);
+  --accent:#FAE750;
+  --accent-2:#EAD63F;
+  --accent-3:#FFF489;
+  --accent-soft:rgba(250,231,80,.16);
+  --accent-line:rgba(250,231,80,.46);
 
-  /* Estados */
   --success:#29CF72;
   --danger:#FF5C5C;
 
-  /* Tipografía / radios / sombras */
-  --radius-lg:16px;       /* más recto que antes, look 2025 */
-  --radius-md:12px;
+  --radius-lg:18px;
+  --radius-md:14px;
   --radius-sm:10px;
-  --shadow-soft:0 8px 24px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
+  --shadow-soft:0 10px 26px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
 }
 
 *{ box-sizing:border-box }
@@ -39,11 +35,11 @@ html,body{ height:100% }
 
 body{
   margin:0;
-  font-family: "General Sans", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: "General Sans", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial;
   color: var(--text);
   background:
-    radial-gradient(1100px 700px at 80% -10%, rgba(250,231,80,.06), transparent 50%),
-    radial-gradient(800px 600px at -10% 120%, rgba(250,231,80,.05), transparent 40%),
+    radial-gradient(900px 600px at 80% -10%, rgba(250,231,80,.07), transparent 55%),
+    radial-gradient(900px 600px at -10% 120%, rgba(250,231,80,.05), transparent 40%),
     var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -52,7 +48,7 @@ body{
 
 ::selection{ background: rgba(250,231,80,.25) }
 
-/* -------- Layout principal -------- */
+/* -------- Layout -------- */
 .app{
   min-height:100%;
   padding:18px 16px 110px;
@@ -60,17 +56,17 @@ body{
   margin:0 auto;
 }
 
-/* -------- Header pegado -------- */
+/* -------- Header -------- */
 .header{
   position:sticky; top:0; z-index:10;
   margin:-18px -16px 14px;
   padding:14px 16px 10px;
   background: linear-gradient(180deg, rgba(17,18,20,.9), rgba(17,18,20,.55) 60%, transparent);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   border-bottom:1px solid var(--border);
 }
 .title-row{ display:flex; align-items:center; gap:12px; justify-content:space-between }
-.app-title{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px }
+.app-title{ display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px; font-size:18px }
 .app-sub{ font-size:12px; color:var(--muted) }
 
 .back-btn{
@@ -85,7 +81,7 @@ body{
 .back-btn:hover{ border-color:#313746 }
 
 /* -------- Grids -------- */
-.grid{ display:grid; grid-template-columns:1fr; gap:14px }
+.grid{ display:grid; grid-template-columns:1fr; gap:16px }
 @media (min-width:720px){ .grid{ grid-template-columns:repeat(2,1fr) } }
 @media (min-width:1024px){ .grid{ grid-template-columns:repeat(3,1fr) } }
 .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
@@ -96,7 +92,7 @@ body{
   background: linear-gradient(180deg, var(--panel), var(--panel-2));
   border:1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding:16px;
+  padding:18px;
   box-shadow: var(--shadow-soft);
   transition: border-color .2s ease, transform .06s ease;
 }
@@ -110,20 +106,20 @@ body{
 }
 
 /* -------- Hero (portada) -------- */
-.hero-grid{ display:grid; gap:14px }
+.hero-grid{ display:grid; gap:16px }
 .hero-card{
   position:relative; overflow:hidden;
-  border-radius:20px; border:1px solid #2A3040;
+  border-radius:22px; border:1px solid #2A3040;
   min-height:220px; display:flex; align-items:flex-end;
   background:#101216; box-shadow: var(--shadow-soft);
 }
 .hero-card .bg{
   position:absolute; inset:0; background-size:cover; background-position:center;
-  filter: saturate(1) brightness(.7);
-  transform: scale(1.03);
+  filter: saturate(1) brightness(.72);
+  transform: scale(1.04);
 }
-.hero-card .overlay{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.0) 45%, rgba(0,0,0,.65) 100%) }
-.hero-card .label{ position:relative; z-index:2; padding:20px; font-size:24px; font-weight:800; letter-spacing:.2px }
+.hero-card .overlay{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.0) 45%, rgba(0,0,0,.68) 100%) }
+.hero-card .label{ position:relative; z-index:2; padding:22px; font-size:24px; font-weight:800; letter-spacing:.2px }
 
 /* -------- Botones -------- */
 .btn{
@@ -158,7 +154,7 @@ body{
 .icon-btn:hover{ border-color:#343A4B }
 .icon-btn.ghost{ background: transparent }
 
-/* -------- Inputs -------- */
+/* -------- Inputs / Chips -------- */
 .input, .select, .chips{
   background: linear-gradient(180deg, #0F1115, #0C0E12);
   color:#F5F7FB; border:1px solid var(--border);
@@ -168,7 +164,6 @@ body{
 .input:focus-visible{ outline:2px solid var(--accent-line); outline-offset:0 }
 .select{ appearance:none }
 
-/* Chips */
 .chips{ display:flex; gap:8px; flex-wrap:wrap; padding:8px }
 .chip{
   border:1px solid var(--border); border-radius:999px;
@@ -182,7 +177,7 @@ body{
 .exercise-card{ display:flex; gap:12px; align-items:center }
 .exercise-card .info{ flex:1 1 auto }
 .exercise-card img.thumb{
-  width:64px; height:64px; object-fit:cover; border-radius:14px;
+  width:68px; height:68px; object-fit:cover; border-radius:14px;
   border:1px solid var(--ring); box-shadow: var(--shadow-soft);
 }
 
@@ -231,7 +226,7 @@ body{
 .workout-header{
   position:sticky; top:0; z-index:10;
   background: linear-gradient(180deg, rgba(17,18,20,.9), rgba(17,18,20,.55) 60%, transparent);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   margin:-18px -16px 14px;
   padding:14px 16px 10px;
   border-bottom:1px solid var(--border);
@@ -255,14 +250,18 @@ body{
 .nav-top .nav-btn:hover{ border-color:#343A4B }
 .nav-top .spacer{ flex:1 }
 
-/* Tarjeta del ejercicio en entrenamiento */
-.exercise-shell{ position:relative }
-.workout-card{ padding-top:8px } /* un pelín de aire bajo la botonera */
+/* Stage de ejercicios (para animaciones suaves) */
+.exercise-shell{
+  position:relative; min-height:220px;
+  will-change: transform, opacity;
+  overflow:hidden;
+}
+.workout-card{ padding-top:8px }
 
 /* Toggle de set completado */
 .toggle{
   display:inline-flex; align-items:center; justify-content:center;
-  width:50px; padding:10px; border-radius:10px;
+  width:52px; padding:10px; border-radius:10px;
   border:1px solid var(--ring);
   background:#171A20; user-select:none; cursor:pointer;
   transition: background .2s ease, border-color .2s ease, transform .06s ease;
@@ -279,7 +278,7 @@ body{
 }
 .stopwatch{ font-size:12px; color:#F3F4F8; margin-top:2px }
 
-/* -------- Estados de “vacío” -------- */
+/* -------- Vacío -------- */
 .empty{
   text-align:center; padding:48px 12px;
   border:1px dashed var(--ring);
@@ -288,8 +287,6 @@ body{
   background: linear-gradient(180deg, #0d0f14, #0a0c11);
 }
 .empty .cta{ margin-top:12px }
-
-/* Separador seguro para que el FAB no tape contenido */
 .footer-safe{ height:40px }
 
 /* -------- Accesibilidad -------- */
@@ -299,41 +296,41 @@ button:focus-visible, .icon-btn:focus-visible, .fab:focus-visible, .chip:focus-v
   border-radius:12px;
 }
 
-/* -------- Transiciones / Animaciones -------- */
+/* -------- Transiciones -------- */
 a, button, .chip, .card, .icon-btn, .fab{ transition: filter .2s ease, border-color .2s ease }
 
-/* Animaciones de entrada/salida para cambios de ejercicio */
+/* Animaciones de cambio de ejercicio (más visibles) */
 @keyframes slideInFromRight {
-  from { opacity:0; transform: translateX(22px) }
+  from { opacity:.0; transform: translateX(80px) }
   to   { opacity:1; transform: translateX(0) }
 }
 @keyframes slideInFromLeft {
-  from { opacity:0; transform: translateX(-22px) }
+  from { opacity:.0; transform: translateX(-80px) }
   to   { opacity:1; transform: translateX(0) }
 }
 @keyframes slideOutToLeft {
   from { opacity:1; transform: translateX(0) }
-  to   { opacity:0; transform: translateX(-22px) }
+  to   { opacity:.0; transform: translateX(-80px) }
 }
 @keyframes slideOutToRight {
   from { opacity:1; transform: translateX(0) }
-  to   { opacity:0; transform: translateX(22px) }
+  to   { opacity:.0; transform: translateX(80px) }
 }
 
-/* Clases utilitarias que el JS aplicará */
-.slide-enter-right{ animation: slideInFromRight .22s ease both }
-.slide-enter-left { animation: slideInFromLeft  .22s ease both }
-.slide-exit-left  { animation: slideOutToLeft   .18s ease both }
-.slide-exit-right { animation: slideOutToRight  .18s ease both }
+/* Clases utilitarias (el JS las añade) */
+.slide-enter-right{ animation: slideInFromRight .28s cubic-bezier(.2,.8,.2,1) both }
+.slide-enter-left { animation: slideInFromLeft  .28s cubic-bezier(.2,.8,.2,1) both }
+.slide-exit-left  { animation: slideOutToLeft   .22s cubic-bezier(.2,.8,.2,1) both }
+.slide-exit-right { animation: slideOutToRight  .22s cubic-bezier(.2,.8,.2,1) both }
 
-/* Fade genérico para cards / modal */
+/* Fade genérico */
 @keyframes fadeIn {
   from { opacity:0; transform: translateY(6px) }
   to   { opacity:1; transform: translateY(0) }
 }
 .card, .hero-card, .modal-card { animation: fadeIn .2s ease both }
 
-/* -------- Scrollbar sutil -------- */
+/* -------- Scrollbar -------- */
 @supports selector(::-webkit-scrollbar) {
   ::-webkit-scrollbar{ width:10px; height:10px }
   ::-webkit-scrollbar-track{ background:#0E1014 }
@@ -345,8 +342,6 @@ a, button, .chip, .card, .icon-btn, .fab{ transition: filter .2s ease, border-co
 h1,h2,h3{ margin:0; font-weight:800; letter-spacing:.2px }
 p{ margin:0 0 8px; color:#D9DEE6 }
 label{ display:block; font-size:12px; color:#B5BCC8; margin-bottom:6px }
-
-/* Espaciado rápido */
 .mt-0{ margin-top:0 } .mt-4{ margin-top:4px } .mt-8{ margin-top:8px } .mt-12{ margin-top:12px } .mt-16{ margin-top:16px }
 .mb-0{ margin-bottom:0 } .mb-4{ margin-bottom:4px } .mb-8{ margin-bottom:8px } .mb-12{ margin-bottom:12px } .mb-16{ margin-bottom:16px }
 
@@ -361,17 +356,12 @@ button.remove:hover, .icon-btn.remove:hover{ border-color:#5C2D2D }
 /* Fallback thumbnail */
 .thumb{
   display:block;
-  width:64px; height:64px; border-radius:14px;
+  width:68px; height:68px; border-radius:14px;
   background:#0d0f13; border:1px solid var(--ring);
   display:grid; place-items:center; color:#B9C0CC;
 }
 
-/* Evitar zoom en iOS con inputs numéricos */
-input[type="number"]{
-  font-size:16px;
-  -moz-appearance: textfield;
-}
+/* iOS: evitar zoom en inputs numéricos */
+input[type="number"]{ font-size:16px; -moz-appearance:textfield }
 input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button{
-  -webkit-appearance: none; margin:0;
-}
+input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0 }
