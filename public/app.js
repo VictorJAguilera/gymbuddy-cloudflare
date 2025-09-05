@@ -1,5 +1,5 @@
 /* GymBuddy 2025 — Frontend v3.1 (compatibility-safe) */
-(function () {
+function () {
   // Paracaídas visible si ocurre cualquier error en tiempo de ejecución
   function overlay(msg) {
     var box = document.createElement('div');
