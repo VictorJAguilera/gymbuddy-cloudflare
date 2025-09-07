@@ -2112,8 +2112,8 @@ function go(view) {
   render();
 }
 
-/*const appEl = document.getElementById("app");*/
-const FAB = document.getElementById("fab-add");
+/*const appEl = document.getElementById("app");
+const FAB = document.getElementById("fab-add");*/
 FAB.addEventListener("click", () => openCreateRoutine());
 
 async function render() {
