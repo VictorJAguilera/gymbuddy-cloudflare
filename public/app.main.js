@@ -75,7 +75,7 @@
     return str.replace(/[&<>"']/g, function(m){ return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[m]; });
   }
   function showFAB(show){
-    var fab = FAB;
+    /*var fab = FAB;*/
     if (!fab) fab = document.getElementById("fab-add");
     if (fab) fab.style.display = show ? "grid" : "none";
   }
@@ -750,7 +750,7 @@ function escapeHtml(str){
   return str.replace(/[&<>"']/g, function(m){ return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[m]; });
 }
 function showFAB(show){
-  var fab = document.getElementById("fab-add");
+  /*var fab = document.getElementById("fab-add");*/
   if (fab) fab.style.display = show ? "grid" : "none";
 }
 function go(view){ STATE.view = view; render(); }
@@ -760,7 +760,7 @@ if (!appEl) {
   document.body.insertAdjacentHTML('afterbegin','<div style="color:#FAE750;padding:12px;text-align:center;background:#231;">Error: falta <code>#app</code> en index.html</div>');
   throw new Error("Falta #app en index.html");
 }
-var FAB = document.getElementById("fab-add");
+/*var FAB = document.getElementById("fab-add");*/
 if (FAB) FAB.addEventListener("click", function(){ openCreateRoutine(); });
 
 function render(){
@@ -2792,10 +2792,10 @@ render();    if (!res.ok) throw new Error("API " + res.status);
 function $(sel, root){ return (root || document).querySelector(sel); }
 function $$(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
 
-var modalRoot = document.getElementById("modal-root");
+/*var modalRoot = document.getElementById("modal-root");
 var modalTitle = document.getElementById("modal-title");
 var modalContent = document.getElementById("modal-content");
-var modalClose = document.getElementById("modal-close");
+var modalClose = document.getElementById("modal-close");*/
 
 function showModal(title, html, onMount) {
   if (!modalRoot) return;
@@ -2827,12 +2827,12 @@ function escapeHtml(str){
   return str.replace(/[&<>"']/g, function(m){ return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[m]; });
 }
 function showFAB(show){
-  var fab = document.getElementById("fab-add");
+  /*var fab = document.getElementById("fab-add");*/
   if (fab) fab.style.display = show ? "grid" : "none";
 }
 function go(view){ STATE.view = view; render(); }
 
-var appEl;
+/*var appEl;*/
 
 function boot() {
   appEl = document.getElementById("app");
@@ -2850,7 +2850,7 @@ function boot() {
     return; // no sigas si no existe #app
   }
 
-  var FAB = document.getElementById("fab-add");
+ /* var FAB = document.getElementById("fab-add");*/
   if (FAB) FAB.addEventListener("click", function(){ openCreateRoutine(); });
 
   render(); // ahora sí, pinta la HOME
@@ -3485,11 +3485,11 @@ function fmtDate(ts) {
 function escapeHtml(str = "") {
   return str.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 }
-function showFAB(show) { const fab = document.getElementById("fab-add"); if (fab) fab.style.display = show ? "grid" : "none"; }
+function showFAB(show) { /*const fab = document.getElementById("fab-add");*/ if (fab) fab.style.display = show ? "grid" : "none"; }
 function go(view) { STATE.view = view; render(); }
 
-const appEl = document.getElementById("app");
-const FAB = document.getElementById("fab-add");
+/*const appEl = document.getElementById("app");
+const FAB = document.getElementById("fab-add");*/
 FAB.addEventListener("click", () => openCreateRoutine());
 
 /* ---------------- Router ---------------- */
