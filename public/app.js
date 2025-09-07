@@ -15,7 +15,7 @@
   }
 
   function loadCore() {
-    var url = '/app.main.js?v=final4'; // cambia el sufijo si subes cambios
+    var url = '/app.main.js?v=build7'; // cambia el sufijo si subes cambios
     fetch(url, { cache: 'no-store' })
       .then(function (res) {
         if (!res.ok) throw new Error('No se pudo descargar app.main.js (' + res.status + ')');
@@ -34,6 +34,26 @@
         };
         try { document.head.appendChild(s); }
         catch (err) { overlay('Excepción al evaluar app.main.js', err && err.message); }
+      })
+      .catch(function (err) {
+        overlay('Fallo al descargar app.main.js', err && err.message);
+      });
+  }
+
+  window.addEventListener('error', function (e) {
+    overlay('JS error', (e && (e.message || (e.filename + ':' + e.lineno))) || 'desconocido');
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    overlay('Promise rejection', (r && (r.message || String(r))) || 'desconocido');
+  });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadCore);
+  } else {
+    loadCore();
+  }
+})();
       })
       .catch(function (err) {
         overlay('Fallo al descargar app.main.js', err && err.message);
