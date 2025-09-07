@@ -15,7 +15,7 @@
   }
 
   function loadCore() {
-    var url = '/app.main.js?v=final1'; // cambia el sufijo si subes cambios
+    var url = '/app.main.js?v=final4'; // cambia el sufijo si subes cambios
     fetch(url, { cache: 'no-store' })
       .then(function (res) {
         if (!res.ok) throw new Error('No se pudo descargar app.main.js (' + res.status + ')');
