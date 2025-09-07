@@ -54,7 +54,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function escapeHtml(str){
     str = (str == null ? "" : String(str));
     return str.replace(/[&<>"']/g, function(m){ return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[m]; });
-  }
+  };
   function showFAB(show){ var fab = FAB || document.getElementById("fab-add"); if (fab) fab.style.display = show ? "grid" : "none"; }
   function go(view){ STATE.view = view; render(); }
 
