@@ -1,10 +1,11 @@
-;(() => {
-  // Evita reevaluación si el core se carga dos veces por cualquier motivo
+;(function () {
+  // Guard: evita reevaluación si se cargara dos veces
   if (window.__GB_APP_ALREADY_LOADED__) {
     console.warn('GymBuddy core ya cargado — omito reevaluación');
-    return;
+    return; // ← legal aquí porque estamos DENTRO de una función (IIFE)
   }
   window.__GB_APP_ALREADY_LOADED__ = true;
+
 
   /* ------------------- Globals del core ------------------- */
   var API = (window.API_BASE || "").replace(/\/+$/, "");
@@ -4939,5 +4940,5 @@ async function renderMarks() {
 /* ---------- Arranque ---------- */
 render();
 
-})(); // fin wrapper de GymBuddy core
+})(); // fin wrapper GymBuddy core
 
