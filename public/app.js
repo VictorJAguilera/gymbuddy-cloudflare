@@ -1,4 +1,4 @@
-/* GymBuddy loader con paracaídas (app.js) — muestra errores de parseo de app.main.js en pantalla */
+/* GymBuddy loader con paracaídas (app.js) — inyecta app.main.js y muestra errores en pantalla */
 (function () {
   function overlay(title, details) {
     try {
@@ -15,7 +15,7 @@
   }
 
   function loadCore() {
-    var url = '/app.main.js?v=loader3'; // cambia sufijo al subir cambios
+    var url = '/app.main.js?v=final1'; // cambia el sufijo si subes cambios
     fetch(url, { cache: 'no-store' })
       .then(function (res) {
         if (!res.ok) throw new Error('No se pudo descargar app.main.js (' + res.status + ')');
@@ -24,9 +24,7 @@
       .then(function (code) {
         // Evita inyectar dos veces el core
         var EXIST = document.getElementById('__gb_core__');
-        if (EXIST) {
-          return; // ya cargado
-        }
+        if (EXIST) return;
         var s = document.createElement('script');
         s.id = '__gb_core__';
         s.type = 'text/javascript';
@@ -34,11 +32,8 @@
         s.onerror = function (e) {
           overlay('Error cargando app.main.js', (e && e.message) || 'desconocido');
         };
-        try {
-          document.head.appendChild(s);
-        } catch (err) {
-          overlay('Excepción al evaluar app.main.js', err && err.message);
-        }
+        try { document.head.appendChild(s); }
+        catch (err) { overlay('Excepción al evaluar app.main.js', err && err.message); }
       })
       .catch(function (err) {
         overlay('Fallo al descargar app.main.js', err && err.message);
