@@ -1347,7 +1347,6 @@ function navigateWorkout(dir) {
 }
 
 /* Persistencia rápida del set (PUT granular) */
-const debounceMap = new Map();
 function debounce(fn, key, wait = 300) {
   clearTimeout(debounceMap.get(key));
   const t = setTimeout(fn, wait);
@@ -2723,7 +2722,7 @@ function navigateWorkout(dir){
 }
 
 /* Persistencia rápida */
-var debounceMap = {};
+/*var debounceMap = {};*/
 function debounce(fn, key, wait){
   if (wait == null) wait = 300;
   if (debounceMap[key]) clearTimeout(debounceMap[key]);
