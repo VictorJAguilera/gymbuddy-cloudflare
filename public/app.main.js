@@ -1,4 +1,12 @@
 /* GymBuddy 2025 — Frontend v3.1 (compatibility-safe) */
+
+;(() => {
+  if (window.__GB_APP_ALREADY_LOADED__) {
+    console.warn('GymBuddy core ya cargado — omito reevaluación');
+    return;
+  }
+  window.__GB_APP_ALREADY_LOADED__ = true;
+
 (function () {
   // Paracaídas visible si ocurre cualquier error en tiempo de ejecución
   function overlay(msg) {
@@ -4266,4 +4274,6 @@ async function renderMarks() {
 
 /* ---------- Arranque ---------- */
 render();
+
+})(); // fin wrapper de GymBuddy core
 
