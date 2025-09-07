@@ -2112,7 +2112,7 @@ function go(view) {
   render();
 }
 
-const appEl = document.getElementById("app");
+/*const appEl = document.getElementById("app");*/
 const FAB = document.getElementById("fab-add");
 FAB.addEventListener("click", () => openCreateRoutine());
 
