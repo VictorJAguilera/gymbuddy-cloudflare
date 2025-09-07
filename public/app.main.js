@@ -1,4 +1,4 @@
-/* GymBuddy core (guard sin returns top-level) */
+/* GymBuddy core (guard sin returns top-level, anti-doble carga) */
 if (window.__GB_APP_ALREADY_LOADED__) {
   console.warn('GymBuddy core ya cargado — omito reevaluación');
 } else {
@@ -6,9 +6,12 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 
   // ====== BEGIN CORE ======
 
-  /* ------------------- Config & Estado ------------------- */
+  /* ---------------------------------------
+   * Config y estado global
+   * ------------------------------------- */
   var API = (window.API_BASE || "").replace(/\/+$/, "");
   var Views = { HOME: "home", ROUTINES: "routines", EDIT: "edit", WORKOUT: "workout", MARKS: "marks" };
+
   var STATE = {
     view: Views.HOME,
     currentRoutineId: null,
@@ -16,10 +19,12 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     stopwatchTimer: null
   };
 
-  // Referencias DOM (se asignan en boot)
+  // Refs DOM globales (UNA sola declaración)
   var appEl, FAB, modalRoot, modalTitle, modalContent, modalClose;
 
-  /* -------- Persistencia rápida (DEBOUNCE idempotente) -------- */
+  /* ---------------------------------------
+   * Debounce idempotente (sin colisiones)
+   * ------------------------------------- */
   window.__GB_DEBOUNCE_MAP__ = window.__GB_DEBOUNCE_MAP__ || {};
   function debounce(fn, key, wait) {
     if (wait == null) wait = 300;
@@ -28,7 +33,9 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     m[key] = setTimeout(fn, wait);
   }
 
-  /* ------------------- Helpers ------------------- */
+  /* ---------------------------------------
+   * Utilidades
+   * ------------------------------------- */
   function api(path, opts) {
     if (!opts) opts = {};
     var headers = opts.headers || {};
@@ -51,7 +58,35 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function showFAB(show){ var fab = FAB || document.getElementById("fab-add"); if (fab) fab.style.display = show ? "grid" : "none"; }
   function go(view){ STATE.view = view; render(); }
 
-  /* ------------------- Router ------------------- */
+  /* ---------------------------------------
+   * Modal
+   * ------------------------------------- */
+  function showModal(title, html, onMount) {
+    if (!modalRoot) return;
+    if (modalTitle) modalTitle.textContent = title;
+    if (modalContent) modalContent.innerHTML = html;
+    modalRoot.classList.remove("hidden");
+    modalRoot.setAttribute("aria-hidden", "false");
+
+    var tryClose = function(ev){
+      var t = ev.target;
+      if (t && (t.id === "modal-close" || t.getAttribute("data-close") === "true")) closeModal();
+    };
+    if (modalClose) modalClose.addEventListener("click", tryClose, { once: true });
+    var back = modalRoot.querySelector(".modal-backdrop");
+    if (back) back.addEventListener("click", tryClose, { once: true });
+
+    if (typeof onMount === "function") onMount();
+  }
+  function closeModal(){
+    if (!modalRoot) return;
+    modalRoot.classList.add("hidden");
+    modalRoot.setAttribute("aria-hidden", "true");
+  }
+
+  /* ---------------------------------------
+   * Router principal
+   * ------------------------------------- */
   function render(){
     if (STATE.view === Views.HOME) return renderHome();
     if (STATE.view === Views.ROUTINES) return renderRoutines();
@@ -60,7 +95,9 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     if (STATE.view === Views.MARKS) return renderMarks();
   }
 
-  /* ------------------- HOME ------------------- */
+  /* ---------------------------------------
+   * HOME (portada)
+   * ------------------------------------- */
   function renderHome(){
     showFAB(false);
     appEl.innerHTML = ''
@@ -86,11 +123,16 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     + '    <div class="label">MIS MARCAS</div>'
     + '  </article>'
     + '</section>';
-    var ct = document.getElementById("card-train"); if (ct) ct.addEventListener("click", function(){ go(Views.ROUTINES); });
-    var cm = document.getElementById("card-marks"); if (cm) cm.addEventListener("click", function(){ go(Views.MARKS); });
+
+    var ct = document.getElementById("card-train");
+    if (ct) ct.addEventListener("click", function(){ go(Views.ROUTINES); });
+    var cm = document.getElementById("card-marks");
+    if (cm) cm.addEventListener("click", function(){ go(Views.MARKS); });
   }
 
-  /* ------------------- ROUTINES LIST ------------------- */
+  /* ---------------------------------------
+   * MIS RUTINAS (listado)
+   * ------------------------------------- */
   function renderRoutines(){
     showFAB(true);
     api("/api/routines").then(function(routines){
@@ -105,6 +147,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       + '    <span class="space"></span>'
       + '  </div>'
       + '</header>';
+
       if (!routines || routines.length === 0){
         html += ''
         + '<div class="empty card">'
@@ -117,16 +160,20 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       }
       appEl.innerHTML = html;
 
-      var bh = document.getElementById("back-home"); if (bh) bh.addEventListener("click", function(){ go(Views.HOME); });
-      var cta = document.getElementById("cta-new"); if (cta) cta.addEventListener("click", openCreateRoutine);
+      var bh = document.getElementById("back-home");
+      if (bh) bh.addEventListener("click", function(){ go(Views.HOME); });
+      var cta = document.getElementById("cta-new");
+      if (cta) cta.addEventListener("click", openCreateRoutine);
 
-      var edits = $$("[data-edit]"); edits.forEach(function(el){
+      var edits = $$("[data-edit]");
+      edits.forEach(function(el){
         el.addEventListener("click", function(){
           STATE.currentRoutineId = el.getAttribute("data-edit");
           go(Views.EDIT);
         });
       });
-      var plays = $$("[data-play]"); plays.forEach(function(el){
+      var plays = $$("[data-play]");
+      plays.forEach(function(el){
         el.addEventListener("click", function(){
           startWorkout(el.getAttribute("data-play"));
         });
@@ -152,7 +199,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     + '    </div>'
     + '    <div class="row" style="gap:8px">'
     + '      <button class="btn icon secondary" aria-label="Editar rutina" data-edit="'+ r.id +'" title="Editar (⚙️)">'
-    + '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0-.12-.64Z"/></svg>'
+    + '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58-2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0-.12-.64Z"/></svg>'
     + '      </button>'
     + '      <button class="btn icon" aria-label="Empezar entrenamiento" data-play="'+ r.id +'" title="Empezar (▶)">'
     + '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>'
@@ -180,7 +227,9 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
-  /* ------------------- EDIT ROUTINE ------------------- */
+  /* ---------------------------------------
+   * EDITAR RUTINA
+   * ------------------------------------- */
   function renderEditRoutine(routineId){
     showFAB(false);
     api('/api/routines/' + routineId).then(function(r){
@@ -208,13 +257,20 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 
       appEl.innerHTML = html;
 
-      var back = document.getElementById("back-routines"); if (back) back.addEventListener("click", function(){ go(Views.ROUTINES); });
-      var add = document.getElementById("add-ex"); if (add) add.addEventListener("click", function(){ openExercisePicker(r.id, function(){ renderEditRoutine(r.id); }); });
-      var save = document.getElementById("save-routine"); if (save) save.addEventListener("click", function(){
+      var back = document.getElementById("back-routines");
+      if (back) back.addEventListener("click", function(){ go(Views.ROUTINES); });
+
+      var add = document.getElementById("add-ex");
+      if (add) add.addEventListener("click", function(){ openExercisePicker(r.id, function(){ renderEditRoutine(r.id); }); });
+
+      var save = document.getElementById("save-routine");
+      if (save) save.addEventListener("click", function(){
         var payload = collectRoutineFromDOM(r);
         api('/api/routines/' + r.id, { method:"PUT", body: JSON.stringify(payload) }).then(function(){ go(Views.ROUTINES); });
       });
-      var ren = document.getElementById("rename"); if (ren) ren.addEventListener("click", function(){
+
+      var ren = document.getElementById("rename");
+      if (ren) ren.addEventListener("click", function(){
         showModal("Renombrar rutina",
           '<div class="row"><input id="newname" class="input" placeholder="Nombre de la rutina" value="'+ escapeHtml(r.name) +'">'
           + '<button id="ok" class="btn">Aceptar</button></div>',
@@ -238,6 +294,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     var img = hasImg
       ? '<img class="thumb" src="'+ ex.image +'" alt="'+ escapeHtml(ex.name || "Ejercicio") +'">'
       : '<div class="thumb">🏋️</div>';
+
+    // En edición: mostrar SIEMPRE los valores guardados (no placeholders vacíos).
     var setsHTML = (x.sets || []).map(function(s){
       return ''
       + '<div class="set" data-set="'+ s.id +'">'
@@ -246,6 +304,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       + '  <button class="icon-btn remove" aria-label="Eliminar serie">🗑️</button>'
       + '</div>';
     }).join("");
+
     return ''
     + '<article class="card" data-rex="'+ x.id +'">'
     + '  <div class="exercise-card">'+ img
@@ -276,6 +335,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     return { exercises: exercises };
   }
 
+  // Delegación: añadir serie / quitar ejercicio / borrar set
   document.addEventListener("click", function(ev){
     var t = ev.target;
     if (!t || !t.classList) return;
@@ -303,7 +363,9 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     }
   });
 
-  /* ------------------- EXERCISE PICKER ------------------- */
+  /* ---------------------------------------
+   * BUSCADOR / PICKER DE EJERCICIOS
+   * ------------------------------------- */
   function openExercisePicker(routineId, onAfter){
     api("/api/exercises/groups").then(function(groups){
       showModal("Añadir ejercicios",
@@ -396,7 +458,9 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
-  /* ------------------- WORKOUT ------------------- */
+  /* ---------------------------------------
+   * ENTRENAMIENTO (play)
+   * ------------------------------------- */
   function startWorkout(routineId){
     api('/api/routines/' + routineId).then(function(r){
       var exs = r && r.exercises ? r.exercises : [];
@@ -491,7 +555,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     + '</div></header>'
     + '<section class="grid"><div id="exercise-stage" class="exercise-shell"></div><div id="finish-container"></div></section>';
 
-    var back = document.getElementById("back-routines-wo"); if (back) back.addEventListener("click", function(){ go(Views.ROUTINES); });
+    var back = document.getElementById("back-routines-wo");
+    if (back) back.addEventListener("click", function(){ go(Views.ROUTINES); });
 
     var stage = document.getElementById("exercise-stage");
     stage.innerHTML = workoutCardHTML(item, idx, total);
@@ -502,8 +567,10 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function updateWorkoutHeader(){
     var s = STATE.workoutSession;
     var progress = Math.round((100 * completedSetsCount(s)) / Math.max(1, maxSetsCount(s)));
-    var counter = document.getElementById("wo-counter"); if (counter) counter.textContent = String(s.currentIndex + 1);
-    var prog = document.getElementById("wo-progress"); if (prog) prog.textContent = progress + '%';
+    var counter = document.getElementById("wo-counter");
+    if (counter) counter.textContent = String(s.currentIndex + 1);
+    var prog = document.getElementById("wo-progress");
+    if (prog) prog.textContent = progress + '%';
   }
 
   function updateFinishCard(){
@@ -519,7 +586,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       showModal("Confirmar",
         '<div class="card"><p>¿Quieres finalizar el entrenamiento?</p><div class="row" style="justify-content:center;margin-top:10px"><button class="btn secondary" id="resume">Reanudar</button><button class="btn" id="confirm-finish">Finalizar entrenamiento</button></div></div>',
         function(){
-          var resume = document.getElementById("resume"); if (resume) resume.addEventListener("click", closeModal);
+          var resume = document.getElementById("resume");
+          if (resume) resume.addEventListener("click", closeModal);
           var confirm = document.getElementById("confirm-finish");
           if (confirm) confirm.addEventListener("click", function(){
             closeModal();
@@ -545,7 +613,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     });
   }
 
-  /* Navegación con animación exacta y colocación pedida */
+  // Navegación con animación pedida: antiguo sale a la IZQUIERDA y nuevo entra desde la DERECHA (al ir a siguiente)
   function navigateWorkout(dir){
     var s = STATE.workoutSession;
     var oldIdx = s.currentIndex;
@@ -576,14 +644,14 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     }, { once:true });
   }
 
-  /* Persistencia rápida de sets */
+  // Persistencia rápida de un set (cambios durante entrenamiento)
   function persistSet(rexId, setId, reps, peso){
     var rid = STATE.currentRoutineId;
     var body = { exercises: [{ id: rexId, sets: [{ id: setId, reps: reps, peso: peso }] }] };
     return api('/api/routines/' + rid, { method:"PUT", body: JSON.stringify(body) }).catch(function(){});
   }
 
-  /* Handlers de una tarjeta de workout */
+  // Vincula eventos dentro de la tarjeta actual de workout
   function attachWorkoutHandlers(cardEl, item){
     var prev = cardEl.querySelector("#wo-prev");
     var next = cardEl.querySelector("#wo-next");
@@ -596,6 +664,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         var reps = cardEl.querySelector('[data-reps="'+ st.id +'"]');
         var peso = cardEl.querySelector('[data-peso="'+ st.id +'"]');
         var tog  = cardEl.querySelector('[data-toggle="'+ st.id +'"]');
+
         if (reps) reps.addEventListener("input", function(ev){
           var v = ev.target.value;
           st.reps = (v === "" ? null : parseInt(v,10));
@@ -619,7 +688,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     }
   }
 
-  /* Auto-siguiente: cuando todas las series de un ejercicio se completan */
+  // Auto-siguiente cuando todas las series de un ejercicio están completadas
   function checkAutoNext(sess, item){
     var allDone = item.sets.length > 0 && item.sets.every(function(x){ return !!x.done; });
     var last = sess.currentIndex === (sess.items.length - 1);
@@ -628,7 +697,9 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     }
   }
 
-  /* ------------------- MARKS ------------------- */
+  /* ---------------------------------------
+   * MIS MARCAS
+   * ------------------------------------- */
   function renderMarks(){
     showFAB(false);
     api("/api/marks").then(function(marks){
@@ -637,6 +708,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       + '  <button class="back-btn" id="back-home-marks"><svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg><span>Inicio</span></button>'
       + '  <div class="app-title"><div>MIS MARCAS</div></div><span class="space"></span>'
       + '</div></header>';
+
       if (!marks || marks.length === 0){
         html += '<div class="empty card"><p><strong>Todavía no hay marcas.</strong></p><p>Completa entrenamientos para ver tus PRs.</p></div>';
       } else {
@@ -649,38 +721,19 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         }).join("") + '</section>';
       }
       appEl.innerHTML = html;
-      var bk = document.getElementById("back-home-marks"); if (bk) bk.addEventListener("click", function(){ go(Views.HOME); });
+
+      var bk = document.getElementById("back-home-marks");
+      if (bk) bk.addEventListener("click", function(){ go(Views.HOME); });
     });
   }
 
-  /* ------------------- Modal ------------------- */
-  function showModal(title, html, onMount) {
-    if (!modalRoot) return;
-    if (modalTitle) modalTitle.textContent = title;
-    if (modalContent) modalContent.innerHTML = html;
-    modalRoot.classList.remove("hidden");
-    modalRoot.setAttribute("aria-hidden", "false");
-    var tryClose = function(ev){
-      var t = ev.target;
-      if (t && (t.id === "modal-close" || t.getAttribute("data-close") === "true")) closeModal();
-    };
-    if (modalClose) modalClose.addEventListener("click", tryClose, { once: true });
-    var back = modalRoot.querySelector(".modal-backdrop"); if (back) back.addEventListener("click", tryClose, { once: true });
-    if (typeof onMount === "function") onMount();
-  }
-  function closeModal(){
-    if (!modalRoot) return;
-    modalRoot.classList.add("hidden");
-    modalRoot.setAttribute("aria-hidden", "true");
-  }
-
-  /* ------------------- Exercise Picker (reutilizado) ------------------- */
-  // (definido arriba con showModal/openCreateExerciseForm)
-
-  /* ------------------- Boot ------------------- */
+  /* ---------------------------------------
+   * Boot
+   * ------------------------------------- */
   function boot() {
     appEl = document.getElementById('app');
-    if (!appEl) { return; }
+    if (!appEl) { return; } // no romper si falta #app (seguridad)
+
     FAB = document.getElementById('fab-add');
     modalRoot = document.getElementById('modal-root');
     modalTitle = document.getElementById('modal-title');
@@ -689,7 +742,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 
     if (FAB) FAB.addEventListener('click', function(){ openCreateRoutine(); });
 
-    render(); // pantalla inicial
+    render(); // pantalla inicial (HOME)
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
