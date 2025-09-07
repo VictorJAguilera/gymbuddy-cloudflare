@@ -1,6 +1,5 @@
 /* GymBuddy loader con paracaídas (app.js) — muestra errores de parseo de app.main.js en pantalla */
 (function () {
-  // UI de error visible en la página (sin consola)
   function overlay(title, details) {
     try {
       var box = document.getElementById('__gb_overlay__');
@@ -15,17 +14,21 @@
     } catch (_) {}
   }
 
-  // Carga segura del “core” y lo inyecta como <script> para capturar errores de parseo
   function loadCore() {
-    var url = '/app.main.js?v=loader1'; // cambia el sufijo cuando subas cambios
+    var url = '/app.main.js?v=loader3'; // cambia sufijo al subir cambios
     fetch(url, { cache: 'no-store' })
       .then(function (res) {
         if (!res.ok) throw new Error('No se pudo descargar app.main.js (' + res.status + ')');
         return res.text();
       })
       .then(function (code) {
-        // inyectamos como <script> con sourceURL para que el stack trace tenga archivo/linea
+        // Evita inyectar dos veces el core
+        var EXIST = document.getElementById('__gb_core__');
+        if (EXIST) {
+          return; // ya cargado
+        }
         var s = document.createElement('script');
+        s.id = '__gb_core__';
         s.type = 'text/javascript';
         s.text = code + '\n//# sourceURL=' + location.origin + '/app.main.js';
         s.onerror = function (e) {
@@ -42,16 +45,14 @@
       });
   }
 
-  // También capturamos errores globales para mostrarlos en pantalla
   window.addEventListener('error', function (e) {
-    overlay('JS error', (e && (e.message || e.filename + ':' + e.lineno)) || 'desconocido');
+    overlay('JS error', (e && (e.message || (e.filename + ':' + e.lineno))) || 'desconocido');
   });
   window.addEventListener('unhandledrejection', function (e) {
     var r = e && e.reason;
     overlay('Promise rejection', (r && (r.message || String(r))) || 'desconocido');
   });
 
-  // Arranque cuando haya DOM
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadCore);
   } else {
