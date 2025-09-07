@@ -19,6 +19,7 @@
 
   // Referencias DOM (se asignan en boot)
   var appEl, FAB, modalRoot, modalTitle, modalContent, modalClose;
+  
 
   /* -------- Persistencia rápida (DEBOUNCE idempotente) -------- */
   window.__GB_DEBOUNCE_MAP__ = window.__GB_DEBOUNCE_MAP__ || {};
@@ -754,7 +755,7 @@ function showFAB(show){
 }
 function go(view){ STATE.view = view; render(); }
 
-var appEl = document.getElementById("app");
+/*var appEl = document.getElementById("app");*/
 if (!appEl) {
   document.body.insertAdjacentHTML('afterbegin','<div style="color:#FAE750;padding:12px;text-align:center;background:#231;">Error: falta <code>#app</code> en index.html</div>');
   throw new Error("Falta #app en index.html");
