@@ -733,7 +733,7 @@
   var back = modalRoot.querySelector(".modal-backdrop");
   if (back) back.addEventListener("click", tryClose, { once: true });
   if (typeof onMount === "function") onMount();
-}
+/*}*/
 function closeModal(){
   if (!modalRoot) return;
   modalRoot.classList.add("hidden");
