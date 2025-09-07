@@ -622,7 +622,16 @@ function navigateWorkout(dir){
 }
 
 /* Persistencia rápida */
-var debounceMap = {};
+/* -------- Persistencia rápida (DEBOUNCE a prueba de doble carga) -------- */
+// No redeclaramos variables globales si el archivo se evalúa dos veces.
+window.__GB_DEBOUNCE_MAP__ = window.__GB_DEBOUNCE_MAP__ || {};
+
+function debounce(fn, key, wait) {
+  if (wait == null) wait = 300;
+  var m = window.__GB_DEBOUNCE_MAP__;
+  if (m[key]) clearTimeout(m[key]);
+  m[key] = setTimeout(fn, wait);
+}
 function debounce(fn, key, wait){
   if (wait == null) wait = 300;
   if (debounceMap[key]) clearTimeout(debounceMap[key]);
