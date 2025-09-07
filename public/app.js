@@ -743,7 +743,7 @@ render();
           p.primaryMuscles || "",
           p.secondaryMuscles || "",
           p.equipment || ""
-        )
+        
         .run();
 
       const row = await env.DB.prepare("SELECT * FROM exercises WHERE id=?").bind(id).first();
