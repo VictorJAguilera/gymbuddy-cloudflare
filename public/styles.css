@@ -125,8 +125,9 @@ body{
 .rest-title{ margin:4px 0 10px; font-weight:800 }
 .rest-circle-wrap{ position:relative; width:160px; height:160px; margin:0 auto 10px }
 .rest-svg{ position:absolute; inset:0 }
-.rest-bg{ fill:none; stroke:#0F141B; stroke-width:10 }
-.rest-fg{ fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round; transform: rotate(-90deg); transform-origin: 60px 60px }
+/* ↓↓↓ cambiados a 6px ↓↓↓ */
+.rest-bg{ fill:none; stroke:#0F141B; stroke-width:6 }
+.rest-fg{ fill:none; stroke:var(--accent); stroke-width:6; stroke-linecap:round; transform: rotate(-90deg); transform-origin: 60px 60px }
 .rest-time{ position:absolute; inset:0; display:grid; place-items:center; font-size:28px; font-weight:900; color:#F6F8FB }
 .rest-presets{ justify-content:center }
 .rest-actions{ margin-top:4px }
