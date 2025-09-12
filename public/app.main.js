@@ -1,4 +1,4 @@
-/* GymBuddy core — UI 2025 + Temporizador de descanso + Nav superior */
+/* GymBuddy core — UI 2025 + Temporizador de descanso (cuenta atrás) + Nav superior */
 if (window.__GB_APP_ALREADY_LOADED__) {
   console.warn('GymBuddy core ya cargado — omito reevaluación');
 } else {
@@ -283,7 +283,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
-  /* ---------- ENTRENAMIENTO + REST ---------- */
+  /* ---------- ENTRENAMIENTO + REST (cuenta atrás) ---------- */
   function startWorkout(routineId){
     api('/api/routines/'+routineId).then(function(r){
       var exs=r&&r.exercises?r.exercises:[];
@@ -376,12 +376,10 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     var back=$("#back-routines-wo"); if(back) back.addEventListener("click", function(){ go(Views.ROUTINES); });
 
     $("#nav-prev").addEventListener("click", function(){
-      // Si hay descanso activo, cancélalo y ve atrás
       if(STATE.rest.active) stopRest(true);
       navigateWorkout("prev");
     });
     $("#nav-next").addEventListener("click", function(){
-      // Si ya hay descanso activo, saltar a siguiente inmediatamente
       if(STATE.rest.active){ finishNavigateTo(STATE.rest.targetIndex); return; }
       requestNextWithRest();
     });
@@ -428,7 +426,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     });
   }
 
-  /* -------- Navegación con descanso -------- */
+  /* -------- Navegación con descanso (cuenta atrás) -------- */
   function requestNextWithRest(){
     var s=STATE.workoutSession;
     var oldIdx=s.currentIndex, newIdx=Math.min(s.items.length-1, oldIdx+1);
@@ -453,10 +451,14 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       });
     });
     $("#rest-plus").addEventListener("click", function(){
-      if(!STATE.rest.active) return;
-      if(STATE.rest.totalMs===0){ startRest(30000); return; }
-      STATE.rest.remainingMs += 30000; STATE.rest.totalMs += 30000;
-      renderRestTime();
+      if (!STATE.rest.active){
+        // Si aún no había empezado, arranca con 30s
+        startRest(30000);
+        return;
+      }
+      STATE.rest.remainingMs += 30000;
+      STATE.rest.totalMs     += 30000;
+      renderRestTime(); // refresca inmediatamente
     });
     $("#rest-skip").addEventListener("click", function(){
       stopRest(true);
@@ -466,19 +468,23 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     renderRestTime(); // muestra 00:00
   }
 
+  // Inicia el descanso con cuenta atrás (mm:ss)
   function startRest(totalMs){
     stopRest(true);
-    STATE.rest.active=true; STATE.rest.totalMs=totalMs; STATE.rest.remainingMs=totalMs;
-    renderRestTime();
+    STATE.rest.active = true;
+    STATE.rest.totalMs = totalMs;
+    STATE.rest.remainingMs = totalMs;
+    renderRestTime(); // muestra 2:00, 1:00, etc. inmediatamente
+
     STATE.rest.tick = setInterval(function(){
       STATE.rest.remainingMs -= 100;
-      if(STATE.rest.remainingMs<=0){ stopRest(false); // terminado
-        // pequeña pausa para que "desaparezca" el temporizador
+      if (STATE.rest.remainingMs <= 0){
+        stopRest(false); // terminado
         setTimeout(function(){ finishNavigateTo(STATE.rest.targetIndex); }, 150);
       } else {
         renderRestTime();
       }
-    },100);
+    }, 100);
   }
 
   function stopRest(cancelOnly){
@@ -487,17 +493,25 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     STATE.rest.active=false;
   }
 
+  // Dibuja el tiempo restante y el progreso del círculo
   function renderRestTime(){
-    var t=$("#rest-time"); var fg=$("#rest-fg");
-    var total=STATE.rest.totalMs, rem=Math.max(0,STATE.rest.remainingMs);
-    var show = total===0 ? 0 : Math.round((total-rem)/1000);
-    var m=Math.floor(show/60), s=show%60;
-    if(t) t.textContent = (String(m).padStart(1,"0")+":"+String(s).padStart(2,"0"));
-    // círculo (progreso de 0 → 100%)
-    var C=339.292; // 2πr con r=54
-    var pct = (total===0)?0 : ( (total-rem)/total );
-    var offset = C*(1-pct);
-    if(fg) fg.style.strokeDashoffset = String(offset);
+    var t  = document.querySelector("#rest-time");
+    var fg = document.querySelector("#rest-fg");
+
+    var total = STATE.rest.totalMs;
+    var rem   = Math.max(0, STATE.rest.remainingMs);
+
+    // Cuenta atrás: mm:ss del tiempo restante
+    var secs = Math.floor(rem / 1000);
+    var m = Math.floor(secs / 60);
+    var s = secs % 60;
+    if (t) t.textContent = String(m).padStart(1, "0") + ":" + String(s).padStart(2, "0");
+
+    // Progreso del anillo (0 → 100% conforme se agota el tiempo)
+    var C = 339.292; // 2πr con r=54
+    var pct = total === 0 ? 0 : ((total - rem) / total);
+    var offset = C * (1 - pct);
+    if (fg) fg.style.strokeDashoffset = String(offset);
   }
 
   function finishNavigateTo(newIdx){
