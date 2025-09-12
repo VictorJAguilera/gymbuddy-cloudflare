@@ -6,17 +6,15 @@
   <title>GymBuddy — 2025</title>
   <meta name="theme-color" content="#161A20" />
   <link rel="preconnect" href="https://images.unsplash.com" />
-  <link rel="stylesheet" href="/styles.css?v=ui2025-2" />
+  <link rel="stylesheet" href="/styles.css?v=ui2025-rt1" />
 </head>
 <body>
-  <!-- Header global (contenidos los pinta JS en cada vista) -->
-  <!-- Contenedor principal -->
   <div id="app" class="app"></div>
 
-  <!-- FAB (+) visible sólo en listado de rutinas -->
+  <!-- FAB (+) sólo en "Mis rutinas" -->
   <button id="fab-add" class="fab" aria-label="Crear rutina">+</button>
 
-  <!-- Modal raíz -->
+  <!-- Modal -->
   <div id="modal-root" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop"></div>
     <div class="modal-card">
@@ -28,7 +26,7 @@
     </div>
   </div>
 
-  <!-- Loader ligero (producción) -->
-  <script src="/app.js?v=ui2025-2" defer></script>
+  <!-- Loader de producción -->
+  <script src="/app.js?v=ui2025-rt1" defer></script>
 </body>
 </html>
