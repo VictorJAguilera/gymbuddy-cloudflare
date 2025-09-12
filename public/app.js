@@ -1,7 +1,7 @@
 // Loader limpio (producción)
 (function () {
   function loadCore() {
-    var url = '/app.main.js?v=ui2025-rt2'; // sube este número cuando cambies el core
+    var url = '/app.main.js?v=ui2025-rt3'; // <-- sube este número al desplegar
     fetch(url, { cache: 'no-store' })
       .then(function (res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.text(); })
       .then(function (code) {
