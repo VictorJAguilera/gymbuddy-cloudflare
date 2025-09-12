@@ -273,7 +273,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     }
     if(t.classList.contains("remove")){
       var row=t.closest(".set"); var setId=row.getAttribute("data-set"); var rexCard=t.closest("article.card[data-rex]"); var rexId3=rexCard.getAttribute("data-rex");
-      api('/api/routines/'+STATE.currentRoutineId+'/exercises/'+rexId3+'/sets/'+setId',{method:"DELETE"}).then(function(){ renderEditRoutine(STATE.currentRoutineId); });
+      api('/api/routines/'+STATE.currentRoutineId+'/exercises/'+rexId3+'/sets/'+setId, { method:"DELETE" }).then(function(){ renderEditRoutine(STATE.currentRoutineId); });
+
     }
   });
 
