@@ -1,6 +1,6 @@
 /* ================================
-   GymBuddy — styles.css (UI 2025 v6)
-   Header con logotipo centrado + nav superior + rest timer
+   GymBuddy — styles.css (UI 2025 v7)
+   Header con logotipo centrado + nav superior + rest timers (ejercicio y serie)
    Paleta: gris más claro + amarillo #FAE750
 =================================== */
 
@@ -120,12 +120,11 @@ body{
 .modal-header{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--ring) }
 .modal-content{ padding:16px }
 
-/* Rest timer */
+/* Rest timer (círculo fino) */
 .rest-card{ text-align:center }
 .rest-title{ margin:4px 0 10px; font-weight:800 }
 .rest-circle-wrap{ position:relative; width:160px; height:160px; margin:0 auto 10px }
 .rest-svg{ position:absolute; inset:0 }
-/* ↓↓↓ cambiados a 6px ↓↓↓ */
 .rest-bg{ fill:none; stroke:#0F141B; stroke-width:6 }
 .rest-fg{ fill:none; stroke:var(--accent); stroke-width:6; stroke-linecap:round; transform: rotate(-90deg); transform-origin: 60px 60px }
 .rest-time{ position:absolute; inset:0; display:grid; place-items:center; font-size:28px; font-weight:900; color:#F6F8FB }
