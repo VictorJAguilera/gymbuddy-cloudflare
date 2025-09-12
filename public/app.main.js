@@ -1,4 +1,6 @@
-/* GymBuddy core — UI 2025 + Temporizador de descanso (cuenta atrás) + Nav superior */
+/* GymBuddy core — UI 2025 + Rest entre ejercicios y entre series (cuenta atrás),
+   Beep + vibración al terminar, Wake Lock, Nav superior */
+
 if (window.__GB_APP_ALREADY_LOADED__) {
   console.warn('GymBuddy core ya cargado — omito reevaluación');
 } else {
@@ -13,10 +15,30 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     currentRoutineId: null,
     workoutSession: null,
     stopwatchTimer: null,
-    rest: { active:false, targetIndex:null, totalMs:0, remainingMs:0, tick:null }
+    // Descanso entre ejercicios (inline)
+    rest: { active:false, targetIndex:null, totalMs:0, remainingMs:0, tick:null },
+    // Descanso entre series (modal)
+    srest: { active:false, totalMs:0, remainingMs:0, tick:null }
   };
 
-  /* ---------- Refs (declaradas una vez) ---------- */
+  /* ---------- Wake Lock ---------- */
+  var wakeLock = null;
+  async function requestWakeLock(){
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        if (wakeLock) wakeLock.addEventListener('release', function(){ /* opcional: log */ });
+      }
+    } catch(_) {}
+  }
+  function releaseWakeLock(){
+    try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch(_) {}
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible' && STATE.view === Views.WORKOUT) requestWakeLock();
+  });
+
+  /* ---------- Refs ---------- */
   var appEl, FAB, modalRoot, modalTitle, modalContent, modalClose;
 
   /* ---------- Utils ---------- */
@@ -28,7 +50,36 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}); }
   function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
   function showFAB(b){ var f=FAB||document.getElementById("fab-add"); if(f) f.style.display=b?"grid":"none"; }
-  function go(v){ STATE.view=v; render(); }
+
+  // Beep + vibración al terminar
+  function restDoneFeedback(){
+    if (navigator.vibrate) { try { navigator.vibrate([60,40,60]); } catch(_){} }
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = "sine"; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.02);
+      o.start();
+      setTimeout(function(){
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.12);
+        o.stop(ctx.currentTime + 0.14);
+      }, 120);
+    } catch(_) {}
+  }
+
+  function go(v){
+    var prev = STATE.view;
+    STATE.view = v;
+    render();
+    // WakeLock on/off según vista
+    if (prev !== Views.WORKOUT && v === Views.WORKOUT) requestWakeLock();
+    if (prev === Views.WORKOUT && v !== Views.WORKOUT) releaseWakeLock();
+  }
 
   /* ---------- Modal ---------- */
   function showModal(title, html, onMount){
@@ -81,12 +132,12 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     appEl.innerHTML = headerShell()
     + '<section class="hero-grid">'
     + '  <article class="hero-card" id="card-train">'
-    + '    <div class="bg" style="background-image:url(\'/src/gim1.png\');"></div>'
+    + '    <div class="bg" style="background-image:url(\'https://images.unsplash.com/photo-1586401100295-7a8096fd231a?q=80&w=1600&auto=format&fit=crop\');"></div>'
     + '    <div class="overlay"></div>'
     + '    <div class="label">ENTRENAR AHORA</div>'
     + '  </article>'
     + '  <article class="hero-card" id="card-marks">'
-    + '    <div class="bg" style="background-image:url(\'/src/gim2.png\');"></div>'
+    + '    <div class="bg" style="background-image:url(\'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=1600&auto=format&fit=crop\');"></div>'
     + '    <div class="overlay"></div>'
     + '    <div class="label">MIS MARCAS</div>'
     + '  </article>'
@@ -222,7 +273,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     }
     if(t.classList.contains("remove")){
       var row=t.closest(".set"); var setId=row.getAttribute("data-set"); var rexCard=t.closest("article.card[data-rex]"); var rexId3=rexCard.getAttribute("data-rex");
-      api('/api/routines/'+STATE.currentRoutineId+'/exercises/'+rexId3+'/sets/'+setId,{method:"DELETE"}).then(function(){ renderEditRoutine(STATE.currentRoutineId); });
+      api('/api/routines/'+STATE.currentRoutineId+'/exercises/'+rexId3+'/sets/'+setId',{method:"DELETE"}).then(function(){ renderEditRoutine(STATE.currentRoutineId); });
     }
   });
 
@@ -283,7 +334,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
-  /* ---------- ENTRENAMIENTO + REST (cuenta atrás) ---------- */
+  /* ---------- ENTRENAMIENTO + RESTs ---------- */
   function startWorkout(routineId){
     api('/api/routines/'+routineId).then(function(r){
       var exs=r&&r.exercises?r.exercises:[];
@@ -308,13 +359,20 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function completedSetsCount(sess){ return sess.items.reduce(function(a,it){ return a + it.sets.filter(function(s){return !!s.done;}).length; },0); }
   function maxSetsCount(sess){ return sess.items.reduce(function(a,it){ return a + it.sets.length; },0) || 1; }
 
-  /* Header de workout + barra progreso */
+  /* Header y nav */
   function workoutHeader(){
     var s=STATE.workoutSession, totalSets=maxSetsCount(s), done=completedSetsCount(s), pct=Math.round(100*done/Math.max(1,totalSets));
     var left='<button class="back-btn" id="back-routines-wo"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg><span>Mis rutinas</span></button>';
     return headerShell(left) +
       '<div class="progressbar"><div class="progressbar-fill" id="wo-bar" style="width:'+pct+'%"></div></div>' +
       '<div class="wo-topline"><div class="wo-meta"><span id="wo-counter">'+(s.currentIndex+1)+'</span> de <span id="wo-total">'+(s.items.length)+'</span></div><div class="wo-meta"><span id="wo-progress">'+pct+'%</span> · <span id="clock">'+fmtDuration(s.durationSec||0)+'</span></div></div>';
+  }
+  function navlineHTML(){
+    return '<div class="workout-navline">' +
+           '  <button class="navline-btn" id="nav-prev" aria-label="Anterior"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg></button>' +
+           '  <div class="navline-spacer"></div>' +
+           '  <button class="navline-btn" id="nav-next" aria-label="Siguiente"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M9 5l7 7-7 7"/></svg></button>' +
+           '</div>';
   }
 
   function workoutCardHTML(item, idx, total){
@@ -331,40 +389,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
                     '  <div class="toggle'+(s.done?' complete':'')+'" data-toggle="'+s.id+'" title="'+(s.done?'Completada':'Incompleta')+'"><span class="check">✓</span></div>' +
                     '</div>';
            }).join("") +
-           '  </div>' +
-           '</article>';
-  }
-
-  /* Nav superior (línea completa con flechas) */
-  function navlineHTML(){
-    return '<div class="workout-navline">' +
-           '  <button class="navline-btn" id="nav-prev" aria-label="Anterior"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg></button>' +
-           '  <div class="navline-spacer"></div>' +
-           '  <button class="navline-btn" id="nav-next" aria-label="Siguiente"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M9 5l7 7-7 7"/></svg></button>' +
-           '</div>';
-  }
-
-  /* Rest timer UI */
-  function restHTML(){
-    return '<article class="card rest-card">' +
-           '  <h3 class="rest-title">¿Un descanso?</h3>' +
-           '  <div class="rest-circle-wrap">' +
-           '    <svg class="rest-svg" width="160" height="160" viewBox="0 0 120 120">' +
-           '      <circle cx="60" cy="60" r="54" class="rest-bg"></circle>' +
-           '      <circle cx="60" cy="60" r="54" class="rest-fg" id="rest-fg" stroke-dasharray="339.292" stroke-dashoffset="339.292"></circle>' +
-           '    </svg>' +
-           '    <div class="rest-time" id="rest-time">00:00</div>' +
-           '  </div>' +
-           '  <div class="row rest-presets">' +
-           '    <button class="btn rest-preset" data-sec="30">0:30</button>' +
-           '    <button class="btn rest-preset" data-sec="60">1:00</button>' +
-           '    <button class="btn rest-preset" data-sec="90">1:30</button>' +
-           '    <button class="btn rest-preset" data-sec="120">2:00</button>' +
-           '  </div>' +
-           '  <div class="row rest-actions">' +
-           '    <button class="btn secondary" id="rest-plus">+30seg</button>' +
-           '    <div class="space"></div>' +
-           '    <button class="btn" id="rest-skip">Saltar</button>' +
            '  </div>' +
            '</article>';
   }
@@ -411,7 +435,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         function(){
           var resume=$("#resume"); if(resume) resume.addEventListener("click", closeModal);
           var confirm=$("#confirm-finish"); if(confirm) confirm.addEventListener("click", function(){
-            closeModal(); stopStopwatch();
+            closeModal(); stopStopwatch(); releaseWakeLock();
             STATE.workoutSession.finishedAt=Date.now();
             api("/api/workouts",{method:"POST",body:JSON.stringify(STATE.workoutSession)})
               .then(function(){
@@ -426,16 +450,39 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     });
   }
 
-  /* -------- Navegación con descanso (cuenta atrás) -------- */
+  /* -------- Navegación con descanso entre ejercicios -------- */
   function requestNextWithRest(){
     var s=STATE.workoutSession;
     var oldIdx=s.currentIndex, newIdx=Math.min(s.items.length-1, oldIdx+1);
     if(newIdx===oldIdx) return;
     var stage=$("#exercise-stage"), oldEl=stage.firstElementChild; if(!oldEl) return;
 
-    // Animación de salida a la izquierda
     oldEl.classList.add("slide-exit-left");
     oldEl.addEventListener("animationend", function(){ if(oldEl.parentNode) oldEl.parentNode.removeChild(oldEl); showRestTimer(newIdx); }, {once:true});
+  }
+
+  function restHTML(){
+    return '<article class="card rest-card">' +
+           '  <h3 class="rest-title">¿Un descanso?</h3>' +
+           '  <div class="rest-circle-wrap">' +
+           '    <svg class="rest-svg" width="160" height="160" viewBox="0 0 120 120">' +
+           '      <circle cx="60" cy="60" r="54" class="rest-bg"></circle>' +
+           '      <circle cx="60" cy="60" r="54" class="rest-fg" id="rest-fg" stroke-dasharray="339.292" stroke-dashoffset="339.292"></circle>' +
+           '    </svg>' +
+           '    <div class="rest-time" id="rest-time">00:00</div>' +
+           '  </div>' +
+           '  <div class="row rest-presets">' +
+           '    <button class="btn rest-preset" data-sec="30">0:30</button>' +
+           '    <button class="btn rest-preset" data-sec="60">1:00</button>' +
+           '    <button class="btn rest-preset" data-sec="90">1:30</button>' +
+           '    <button class="btn rest-preset" data-sec="120">2:00</button>' +
+           '  </div>' +
+           '  <div class="row rest-actions">' +
+           '    <button class="btn secondary" id="rest-plus">+30seg</button>' +
+           '    <div class="space"></div>' +
+           '    <button class="btn" id="rest-skip">Saltar</button>' +
+           '  </div>' +
+           '</article>';
   }
 
   function showRestTimer(targetIdx){
@@ -443,7 +490,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     var stage=$("#exercise-stage");
     stage.innerHTML = restHTML();
 
-    // Botones de presets
+    // presets
     $$(".rest-preset").forEach(function(b){
       b.addEventListener("click", function(){
         var sec=parseInt(b.getAttribute("data-sec"),10)||0;
@@ -452,65 +499,54 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     });
     $("#rest-plus").addEventListener("click", function(){
       if (!STATE.rest.active){
-        // Si aún no había empezado, arranca con 30s
-        startRest(30000);
-        return;
+        startRest(30000); return;
       }
       STATE.rest.remainingMs += 30000;
       STATE.rest.totalMs     += 30000;
-      renderRestTime(); // refresca inmediatamente
+      renderRestTime();
     });
     $("#rest-skip").addEventListener("click", function(){
       stopRest(true);
       finishNavigateTo(STATE.rest.targetIndex);
     });
 
-    renderRestTime(); // muestra 00:00
+    renderRestTime();
   }
 
-  // Inicia el descanso con cuenta atrás (mm:ss)
+  // Cuenta atrás entre ejercicios
   function startRest(totalMs){
     stopRest(true);
     STATE.rest.active = true;
     STATE.rest.totalMs = totalMs;
     STATE.rest.remainingMs = totalMs;
-    renderRestTime(); // muestra 2:00, 1:00, etc. inmediatamente
+    renderRestTime();
 
     STATE.rest.tick = setInterval(function(){
       STATE.rest.remainingMs -= 100;
       if (STATE.rest.remainingMs <= 0){
-        stopRest(false); // terminado
+        stopRest(false);
+        restDoneFeedback();
         setTimeout(function(){ finishNavigateTo(STATE.rest.targetIndex); }, 150);
       } else {
         renderRestTime();
       }
     }, 100);
   }
-
   function stopRest(cancelOnly){
     if(STATE.rest.tick){ clearInterval(STATE.rest.tick); STATE.rest.tick=null; }
-    if(cancelOnly){ /* no hacer nada más */ }
+    if(cancelOnly){ /* noop */ }
     STATE.rest.active=false;
   }
-
-  // Dibuja el tiempo restante y el progreso del círculo
   function renderRestTime(){
-    var t  = document.querySelector("#rest-time");
-    var fg = document.querySelector("#rest-fg");
-
+    var t  = $("#rest-time");
+    var fg = $("#rest-fg");
     var total = STATE.rest.totalMs;
     var rem   = Math.max(0, STATE.rest.remainingMs);
 
-    // Cuenta atrás: mm:ss del tiempo restante
-    var secs = Math.floor(rem / 1000);
-    var m = Math.floor(secs / 60);
-    var s = secs % 60;
-    if (t) t.textContent = String(m).padStart(1, "0") + ":" + String(s).padStart(2, "0");
+    var secs = Math.floor(rem / 1000), m = Math.floor(secs/60), s = secs%60;
+    if (t) t.textContent = String(m).padStart(1,"0")+":"+String(s).padStart(2,"0");
 
-    // Progreso del anillo (0 → 100% conforme se agota el tiempo)
-    var C = 339.292; // 2πr con r=54
-    var pct = total === 0 ? 0 : ((total - rem) / total);
-    var offset = C * (1 - pct);
+    var C=339.292, pct = total===0 ? 0 : ((total-rem)/total), offset = C*(1-pct);
     if (fg) fg.style.strokeDashoffset = String(offset);
   }
 
@@ -552,12 +588,90 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     }, {once:true});
   }
 
+  // Persistencia de sets
   function persistSet(rexId, setId, reps, peso){
     var rid=STATE.currentRoutineId;
     var body={ exercises:[{ id:rexId, sets:[{ id:setId, reps:reps, peso:peso }] }] };
     return api('/api/routines/'+rid,{method:"PUT",body:JSON.stringify(body)}).catch(function(){});
   }
 
+  // ------- Descanso entre series (modal) -------
+  function srestHTML(){
+    return '<div class="card rest-card">' +
+           '  <h3 class="rest-title">¿Un descanso?</h3>' +
+           '  <div class="rest-circle-wrap">' +
+           '    <svg class="rest-svg" width="160" height="160" viewBox="0 0 120 120">' +
+           '      <circle cx="60" cy="60" r="54" class="rest-bg"></circle>' +
+           '      <circle cx="60" cy="60" r="54" class="rest-fg" id="srest-fg" stroke-dasharray="339.292" stroke-dashoffset="339.292"></circle>' +
+           '    </svg>' +
+           '    <div class="rest-time" id="srest-time">00:00</div>' +
+           '  </div>' +
+           '  <div class="row rest-presets">' +
+           '    <button class="btn rest-preset" data-sec="30">0:30</button>' +
+           '    <button class="btn rest-preset" data-sec="60">1:00</button>' +
+           '    <button class="btn rest-preset" data-sec="90">1:30</button>' +
+           '    <button class="btn rest-preset" data-sec="120">2:00</button>' +
+           '  </div>' +
+           '  <div class="row rest-actions">' +
+           '    <button class="btn secondary" id="srest-plus">+30seg</button>' +
+           '    <div class="space"></div>' +
+           '    <button class="btn" id="srest-skip">Saltar</button>' +
+           '  </div>' +
+           '</div>';
+  }
+  function openSetRestModal(){
+    showModal("Descanso entre series", srestHTML(), function(){
+      $$(".rest-preset", modalContent).forEach(function(b){
+        b.addEventListener("click", function(){
+          var sec = parseInt(b.getAttribute("data-sec"),10)||0;
+          srestStart(sec*1000);
+        });
+      });
+      $("#srest-plus").addEventListener("click", function(){
+        if(!STATE.srest.active){ srestStart(30000); return; }
+        STATE.srest.remainingMs += 30000;
+        STATE.srest.totalMs     += 30000;
+        srestRender();
+      });
+      $("#srest-skip").addEventListener("click", function(){
+        srestStop(true);
+        closeModal();
+      });
+      srestRender();
+    });
+  }
+  function srestStart(totalMs){
+    srestStop(true);
+    STATE.srest.active = true;
+    STATE.srest.totalMs = totalMs;
+    STATE.srest.remainingMs = totalMs;
+    srestRender();
+    STATE.srest.tick = setInterval(function(){
+      STATE.srest.remainingMs -= 100;
+      if (STATE.srest.remainingMs <= 0){
+        srestStop(false);
+        restDoneFeedback();
+        setTimeout(function(){ closeModal(); }, 120);
+      } else {
+        srestRender();
+      }
+    }, 100);
+  }
+  function srestStop(cancelOnly){
+    if(STATE.srest.tick){ clearInterval(STATE.srest.tick); STATE.srest.tick=null; }
+    if(cancelOnly){ /* noop */ }
+    STATE.srest.active=false;
+  }
+  function srestRender(){
+    var t=$("#srest-time"), fg=$("#srest-fg");
+    var total=STATE.srest.totalMs, rem=Math.max(0,STATE.srest.remainingMs);
+    var secs=Math.floor(rem/1000), m=Math.floor(secs/60), s=secs%60;
+    if(t) t.textContent = String(m).padStart(1,"0")+":"+String(s).padStart(2,"0");
+    var C=339.292, pct= total===0?0:((total-rem)/total), offset=C*(1-pct);
+    if(fg) fg.style.strokeDashoffset = String(offset);
+  }
+
+  // Handlers de workout (incluye disparar descanso por serie)
   function attachWorkoutHandlers(cardEl, item){
     for(var i=0;i<item.sets.length;i++){
       (function(st){
@@ -570,8 +684,15 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         if(tog)  tog.addEventListener("click", function(){
           st.done=!st.done; tog.classList.toggle("complete", st.done);
           if(navigator && navigator.vibrate){ try{ navigator.vibrate(30); }catch(_){} }
-          checkAutoNext(STATE.workoutSession, item);
           updateWorkoutHeader();
+
+          // Si se completa una serie, abre descanso entre series (modal)
+          if (st.done) {
+            openSetRestModal();
+          }
+
+          // Avance automático al siguiente ejercicio cuando TODAS las series estén hechas
+          checkAutoNext(STATE.workoutSession, item);
         });
       })(item.sets[i]);
     }
