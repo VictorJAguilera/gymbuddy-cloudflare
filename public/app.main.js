@@ -220,7 +220,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     '    </div>' +
     '    <div class="row" style="gap:8px">' +
     '      <button class="btn icon secondary" aria-label="Editar rutina" data-edit="'+ r.id +'" title="Editar (⚙️)">' +
-    '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a.5.5,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0,.12-.64Z"/></svg>' +
+    '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.5,6.5,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0,.12-.64Z"/></svg>' +
     '      </button>' +
     '      <button class="btn icon" aria-label="Empezar entrenamiento" data-play="'+ r.id +'" title="Empezar (▶)">' +
     '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>' +
@@ -249,7 +249,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
-  /* ---------- EDITAR RUTINA (incluye borrado estilo ejercicios/sets) ---------- */
+  /* ---------- EDITAR RUTINA (incluye borrado con fallback POST/DELETE) ---------- */
   function renderEditRoutine(routineId){
     showFAB(false);
     api('/api/routines/'+encodeURIComponent(routineId)).then(function(r){
@@ -286,31 +286,44 @@ if (window.__GB_APP_ALREADY_LOADED__) {
           function(){
             var c = $("#del-cancel"); if (c) c.addEventListener("click", closeModal);
             var ok = $("#del-confirm");
-if (ok) ok.addEventListener("click", function(){
-  // 1) Intento principal: POST de acción (suele evitar CORS/preflight)
-  api('/api/routines/' + encodeURIComponent(r.id) + '/delete', { method:'POST' })
-    .then(function(){
-      closeModal();
-      go(Views.ROUTINES);
-    })
-    .catch(function(err){
-      // Si el Worker no tiene esa ruta, probamos DELETE canónico.
-      if (/API 404|API 405/i.test(err.message)) {
-        return api('/api/routines/' + encodeURIComponent(r.id), { method:'DELETE' })
-          .then(function(){
-            closeModal();
-            go(Views.ROUTINES);
-          });
-      }
-      // Otro error real
-      throw err;
-    })
-    .catch(function(err2){
-      showModal("Error al eliminar",
-        '<div class="card"><p>No se pudo eliminar la rutina.</p><p class="small">'+escapeHtml(err2.message)+'</p><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
-      );
-    });
-});
+            if (ok) ok.addEventListener("click", function(){
+              var rid = encodeURIComponent(r.id);
+              // desactiva botones mientras se intenta
+              $("#del-confirm").disabled = true; $("#del-cancel").disabled = true;
+
+              // Intento 1: POST /api/routines/:id/delete
+              api('/api/routines/' + rid + '/delete', { method:'POST' })
+                .then(function(){
+                  var mc = $("#modal-content");
+                  if (mc) mc.insertAdjacentHTML('beforeend','<p class="small">✔ Borrado por <code>POST /api/routines/:id/delete</code></p>');
+                  closeModal();
+                  go(Views.ROUTINES);
+                })
+                .catch(function(err){
+                  // Fallback: DELETE /api/routines/:id
+                  if (/API 404|API 405/i.test(err.message)) {
+                    return api('/api/routines/' + rid, { method:'DELETE' })
+                      .then(function(){
+                        var mc = $("#modal-content");
+                        if (mc) mc.insertAdjacentHTML('beforeend','<p class="small">✔ Borrado por <code>DELETE /api/routines/:id</code></p>');
+                        closeModal();
+                        go(Views.ROUTINES);
+                      });
+                  }
+                  throw err;
+                })
+                .catch(function(err2){
+                  showModal("Error al eliminar",
+                    '<div class="card"><p>No se pudo eliminar la rutina.</p>'
+                    + '<p class="small">'+escapeHtml(err2.message)+'</p>'
+                    + '<p class="small">El servidor no expone <code>POST /api/routines/:id/delete</code> ni <code>DELETE /api/routines/:id</code>.</p>'
+                    + '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
+                  );
+                })
+                .finally(function(){
+                  $("#del-confirm").disabled = false; $("#del-cancel").disabled = false;
+                });
+            });
           }
         );
       });
@@ -381,7 +394,7 @@ if (ok) ok.addEventListener("click", function(){
               .then(function(list){
                 grid.innerHTML = list.map(function(e){
                   var img=e.image?'<img class="thumb" src="'+e.image+'" alt="'+escapeHtml(e.name)+'">':'<div class="thumb">🏋️</div>';
-                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px)">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
+                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
                 }).join("");
                 $$("[data-add]",grid).forEach(function(btn){
                   btn.addEventListener("click", function(){
