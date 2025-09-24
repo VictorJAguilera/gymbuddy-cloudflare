@@ -31,9 +31,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     currentRoutineId: null,
     workoutSession: null,
     stopwatchTimer: null,
-    // Descanso entre ejercicios (inline)
     rest: { active:false, targetIndex:null, totalMs:0, remainingMs:0, tick:null },
-    // Descanso entre series (modal)
     srest: { active:false, totalMs:0, remainingMs:0, tick:null }
   };
 
@@ -43,7 +41,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     try {
       if ('wakeLock' in navigator) {
         wakeLock = await navigator.wakeLock.request('screen');
-        if (wakeLock) wakeLock.addEventListener('release', function(){ /* opcional */ });
+        if (wakeLock) wakeLock.addEventListener('release', function(){});
       }
     } catch(_) {}
   }
@@ -61,7 +59,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   window.__GB_DEBOUNCE_MAP__ = window.__GB_DEBOUNCE_MAP__ || {};
   function debounce(fn, key, wait){ if(wait==null) wait=300; var m=window.__GB_DEBOUNCE_MAP__; if(m[key]) clearTimeout(m[key]); m[key]=setTimeout(fn,wait); }
 
-  // API robusta: soporta 204/Texto/JSON y muestra texto de error del servidor
+  // API robusta: soporta 204/Texto/JSON y muestra texto del servidor
   function api(path, opts){
     opts = opts || {};
     var h = opts.headers || {};
@@ -102,23 +100,16 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function $(s,r){ return (r||document).querySelector(s); }
   function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
   function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}); }
-  function escapeHtml(str){
-    str=(str==null?"":String(str));
-    return str.replace(/[&<>"']/g,function(m){
-      return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m];
-    });
-  }
+  function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;"," >":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
   function showFAB(b){ var f=FAB||document.getElementById("fab-add"); if(f) f.style.display=b?"grid":"none"; }
 
-  // Beep + vibración al terminar
+  // Beep + vibración
   function restDoneFeedback(){
     if (navigator.vibrate) { try { navigator.vibrate([60,40,60]); } catch(_){} }
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
-      var ctx = new Ctx();
-      var o = ctx.createOscillator();
-      var g = ctx.createGain();
+      var ctx = new Ctx(), o = ctx.createOscillator(), g = ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
       o.type = "sine"; o.frequency.value = 880;
       g.gain.setValueAtTime(0.001, ctx.currentTime);
@@ -237,7 +228,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     '    </div>' +
     '    <div class="row" style="gap:8px">' +
     '      <button class="btn icon secondary" aria-label="Editar rutina" data-edit="'+ r.id +'" title="Editar (⚙️)">' +
-    '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73-1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0-.12-.64Z"/></svg>' +
+    '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0-.12-.64Z"/></svg>' +
     '      </button>' +
     '      <button class="btn icon" aria-label="Empezar entrenamiento" data-play="'+ r.id +'" title="Empezar (▶)">' +
     '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>' +
@@ -266,15 +257,32 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
-  /* ---------- DELETE inteligente con variantes ---------- */
+  /* ---------- DELETE inteligente (prioriza no-preflight) ---------- */
   function tryDeleteVariant(rid, variant){
     switch(variant){
-      case 'body':     // DELETE /api/routines  {id}
-        return api('/api/routines', { method:'DELETE', body: JSON.stringify({ id: rid }) });
+      // 1) No-preflight candidatos (POST simple, x-www-form-urlencoded o sin body)
+      case 'actionUrlencoded': // POST /api/routines/:id/delete  id=RID
+        return api('/api/routines/' + encodeURIComponent(rid) + '/delete', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+          body:'id=' + encodeURIComponent(rid)
+        });
+      case 'collectionUrlencoded': // POST /api/routines/delete  id=RID
+        return api('/api/routines/delete', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+          body:'id=' + encodeURIComponent(rid)
+        });
+      case 'action':   // POST /api/routines/:id/delete  (sin body)
+        return api('/api/routines/' + encodeURIComponent(rid) + '/delete', { method:'POST' });
+
+      // 2) Con preflight (si el backend lo soporta)
       case 'rest':     // DELETE /api/routines/:id
         return api('/api/routines/' + encodeURIComponent(rid), { method:'DELETE' });
       case 'qs':       // DELETE /api/routines?id=RID
         return api('/api/routines?id=' + encodeURIComponent(rid), { method:'DELETE' });
+      case 'body':     // DELETE /api/routines  {id}
+        return api('/api/routines', { method:'DELETE', body: JSON.stringify({ id: rid }) });
       case 'overrideHeader': // POST /api/routines/:id  (X-HTTP-Method-Override: DELETE)
         return api('/api/routines/' + encodeURIComponent(rid), {
           method:'POST',
@@ -282,16 +290,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         });
       case 'overrideBody':   // POST /api/routines/:id  {"_method":"DELETE"}
         return api('/api/routines/' + encodeURIComponent(rid), { method:'POST', body: JSON.stringify({ _method:'DELETE' }) });
-      case 'actionDelete':   // POST /api/routines/:id/delete
-        return api('/api/routines/' + encodeURIComponent(rid) + '/delete', { method:'POST' });
       case 'collectionDelete': // POST /api/routines/delete  {id}
         return api('/api/routines/delete', { method:'POST', body: JSON.stringify({ id: rid }) });
-      case 'formUrlencoded': // POST /api/routines/delete  id=RID (x-www-form-urlencoded)
-        return api('/api/routines/delete', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
-          body:'id=' + encodeURIComponent(rid)
-        });
       default:
         return Promise.reject(new Error('Variant desconocida'));
     }
@@ -301,24 +301,24 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     var pref = null;
     try { pref = localStorage.getItem('GB_DELETE_STYLE') || null; } catch(_) {}
     var order = pref
-      ? [pref, 'body','rest','qs','overrideHeader','overrideBody','actionDelete','collectionDelete','formUrlencoded']
-          .filter(function(v, i, self){ return self.indexOf(v) === i; })
-      : ['body','rest','qs','overrideHeader','overrideBody','actionDelete','collectionDelete','formUrlencoded'];
+      ? [pref,
+         'actionUrlencoded','collectionUrlencoded','action',
+         'rest','qs','body','overrideHeader','overrideBody','collectionDelete']
+         .filter(function(v,i,self){return self.indexOf(v)===i;})
+      : ['actionUrlencoded','collectionUrlencoded','action',
+         'rest','qs','body','overrideHeader','overrideBody','collectionDelete'];
 
     function loop(i){
-      if (i >= order.length) {
-        return Promise.reject(new Error('No funcionó ninguna variante de borrado'));
-      }
+      if (i >= order.length) return Promise.reject(new Error('No funcionó ninguna variante de borrado'));
       var variant = order[i];
       return tryDeleteVariant(rid, variant).then(function(res){
         try { localStorage.setItem('GB_DELETE_STYLE', variant); } catch(_) {}
         return res;
       }).catch(function(err){
-        // Si es 4xx/405 típicos de ruta/método, prueba siguiente; otros errores (401/403) se propagan
         if (/API 404|API 405|API 400|API 415/i.test(err.message)) {
           return loop(i + 1);
         }
-        throw err;
+        throw err; // 401/403/500: error real
       });
     }
     return loop(0);
@@ -331,7 +331,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       { label:'DELETE /api/routines/:id',     method:'OPTIONS', path:'/api/routines/'+encodeURIComponent(rid) },
       { label:'POST /api/routines/:id/delete',method:'OPTIONS', path:'/api/routines/'+encodeURIComponent(rid)+'/delete' },
       { label:'POST /api/routines/delete',    method:'OPTIONS', path:'/api/routines/delete' },
-      { label:'GET /api/routines/:id',        method:'GET',     path:'/api/routines/'+encodeURIComponent(rid) }, // si GET existe, la ruta base existe
+      { label:'GET /api/routines/:id',        method:'GET',     path:'/api/routines/'+encodeURIComponent(rid) },
       { label:'HEAD /api/routines/:id',       method:'HEAD',    path:'/api/routines/'+encodeURIComponent(rid) },
     ];
     return Promise.all(candidates.map(function(c){
@@ -481,7 +481,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     if(t.classList.contains("remove")){
       var row=t.closest(".set"); var setId=row.getAttribute("data-set"); var rexCard=t.closest("article.card[data-rex]"); var rexId3=rexCard.getAttribute("data-rex");
       api('/api/routines/'+STATE.currentRoutineId+'/exercises/'+rexId3+'/sets/'+setId, { method:"DELETE" }).then(function(){ renderEditRoutine(STATE.currentRoutineId); });
-
     }
   });
 
@@ -500,7 +499,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
               .then(function(list){
                 grid.innerHTML = list.map(function(e){
                   var img=e.image?'<img class="thumb" src="'+e.image+'" alt="'+escapeHtml(e.name)+'">':'<div class="thumb">🏋️</div>';
-                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
+                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px)">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
                 }).join("");
                 $$("[data-add]",grid).forEach(function(btn){
                   btn.addEventListener("click", function(){
@@ -587,7 +586,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     return '<article class="card workout-card" data-index="'+idx+'">' +
            '  <div class="exercise-card">'+
            (item.image?'<img class="thumb" src="'+item.image+'" alt="'+escapeHtml(item.name)+'">':'<div class="thumb">🏋️</div>')+
-           '    <div class="info"><h3 style="margin:0 0 6px">'+escapeHtml(item.name)+'</h3><div class="small">'+escapeHtml(item.bodyPart||"")+'</div></div>' +
+           '    <div class="info"><h3 style="margin:0 0 6px)">'+escapeHtml(item.name)+'</h3><div class="small">'+escapeHtml(item.bodyPart||"")+'</div></div>' +
            '  </div>' +
            '  <div class="sets">' +
            item.sets.map(function(s){
@@ -865,7 +864,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   }
   function srestStop(cancelOnly){
     if(STATE.srest.tick){ clearInterval(STATE.srest.tick); STATE.srest.tick=null; }
-    if(cancelOnly){ /* noop */ }
     STATE.srest.active=false;
   }
   function srestRender(){
@@ -877,7 +875,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     if(fg) fg.style.strokeDashoffset = String(offset);
   }
 
-  // Handlers de workout (incluye disparar descanso por serie)
+  // Handlers de workout
   function attachWorkoutHandlers(cardEl, item){
     for(var i=0;i<item.sets.length;i++){
       (function(st){
@@ -891,7 +889,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
           st.done=!st.done; tog.classList.toggle("complete", st.done);
           if(navigator && navigator.vibrate){ try{ navigator.vibrate(30); }catch(_){} }
           updateWorkoutHeader();
-
           if (st.done) { openSetRestModal(); }
           checkAutoNext(STATE.workoutSession, item);
         });
