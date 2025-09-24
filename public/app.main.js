@@ -5,7 +5,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 } else {
   window.__GB_APP_ALREADY_LOADED__ = true;
 
-  /* ---------- Bloqueo de zoom global ---------- */
+  /* ---------- Bloqueo de zoom global (pinch/double-tap) ---------- */
   (function(){
     document.addEventListener('touchstart', function(e){
       if (e.touches && e.touches.length > 1) e.preventDefault();
@@ -30,7 +30,9 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     currentRoutineId: null,
     workoutSession: null,
     stopwatchTimer: null,
+    // Descanso entre ejercicios (inline)
     rest: { active:false, targetIndex:null, totalMs:0, remainingMs:0, tick:null },
+    // Descanso entre series (modal)
     srest: { active:false, totalMs:0, remainingMs:0, tick:null }
   };
 
@@ -40,7 +42,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     try {
       if ('wakeLock' in navigator) {
         wakeLock = await navigator.wakeLock.request('screen');
-        if (wakeLock) wakeLock.addEventListener('release', function(){});
+        if (wakeLock) wakeLock.addEventListener('release', function(){ /* noop */ });
       }
     } catch(_) {}
   }
@@ -60,10 +62,13 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function $(s,r){ return (r||document).querySelector(s); }
   function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
   function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}); }
-  function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
+  function escapeHtml(str){
+    str=(str==null?"":String(str));
+    return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m];});
+  }
   function showFAB(b){ var f=FAB||document.getElementById("fab-add"); if(f) f.style.display=b?"grid":"none"; }
 
-  // API robusta
+  // API robusta: soporta 204/Texto/JSON y muestra texto del servidor en errores
   function api(path, opts){
     opts = opts || {};
     var h = opts.headers || {};
@@ -86,6 +91,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       return r.text().then(function(t){ return t || null; });
     });
   }
+
+  // fetchRaw para probing sin imponer JSON por defecto
   function fetchRaw(path, opts){
     opts = opts || {};
     var url = API + path;
@@ -99,13 +106,15 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     });
   }
 
-  // Beep + vibración
+  // Beep + vibración al terminar descansos
   function restDoneFeedback(){
     if (navigator.vibrate) { try { navigator.vibrate([60,40,60]); } catch(_){} }
     try {
       var Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
-      var ctx = new Ctx(), o = ctx.createOscillator(), g = ctx.createGain();
+      var ctx = new Ctx();
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
       o.connect(g); g.connect(ctx.destination);
       o.type = "sine"; o.frequency.value = 880;
       g.gain.setValueAtTime(0.001, ctx.currentTime);
@@ -122,6 +131,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     var prev = STATE.view;
     STATE.view = v;
     render();
+    // WakeLock on/off según vista
     if (prev !== Views.WORKOUT && v === Views.WORKOUT) requestWakeLock();
     if (prev === Views.WORKOUT && v !== Views.WORKOUT) releaseWakeLock();
   }
@@ -224,7 +234,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     '    </div>' +
     '    <div class="row" style="gap:8px">' +
     '      <button class="btn icon secondary" aria-label="Editar rutina" data-edit="'+ r.id +'" title="Editar (⚙️)">' +
-    '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0-.12-.64Z"/></svg>' +
+    '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0,.12-.64Z"/></svg>' +
     '      </button>' +
     '      <button class="btn icon" aria-label="Empezar entrenamiento" data-play="'+ r.id +'" title="Empezar (▶)">' +
     '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>' +
@@ -253,21 +263,23 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
-  /* ---------- DELETE inteligente: más variantes ---------- */
+  /* ---------- DELETE seguro: sólo rutas que NO pueden crear ---------- */
   function tryDeleteVariant(rid, variant){
     switch(variant){
-      /* No-preflight típicos (POST simples) */
-      case 'actionUrlencoded': // POST /api/routines/:id/delete  id=RID
+      // No-preflight (POST simples a endpoints de acción):
+      case 'actionUrlencoded': // POST /api/routines/:id/delete  id=RID (x-www-form-urlencoded)
         return api('/api/routines/' + encodeURIComponent(rid) + '/delete', {
-          method:'POST', headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+          method:'POST',
+          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
           body:'id=' + encodeURIComponent(rid)
         });
-      case 'collectionUrlencoded': // POST /api/routines/delete  id=RID
+      case 'collectionUrlencoded': // POST /api/routines/delete  id=RID (x-www-form-urlencoded)
         return api('/api/routines/delete', {
-          method:'POST', headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+          method:'POST',
+          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
           body:'id=' + encodeURIComponent(rid)
         });
-      case 'action':   // POST /api/routines/:id/delete
+      case 'action': // POST /api/routines/:id/delete  (sin body)
         return api('/api/routines/' + encodeURIComponent(rid) + '/delete', { method:'POST' });
       case 'postDeleteId': // POST /api/routines/delete/:id
         return api('/api/routines/delete/' + encodeURIComponent(rid), { method:'POST' });
@@ -275,34 +287,12 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         return api('/api/routines/remove/' + encodeURIComponent(rid), { method:'POST' });
       case 'postRemove': // POST /api/routines/remove  {id}
         return api('/api/routines/remove', { method:'POST', body: JSON.stringify({ id: rid }) });
-      case 'postActionDelete': // POST /api/routines  {action:'delete', id}
-        return api('/api/routines', { method:'POST', body: JSON.stringify({ action:'delete', id: rid }) });
 
-      /* Con preflight (si está soportado) */
-      case 'rest':     // DELETE /api/routines/:id
+      // Con preflight (si el backend lo soporta):
+      case 'rest': // DELETE /api/routines/:id
         return api('/api/routines/' + encodeURIComponent(rid), { method:'DELETE' });
-      case 'qs':       // DELETE /api/routines?id=RID
+      case 'qs':   // DELETE /api/routines?id=RID
         return api('/api/routines?id=' + encodeURIComponent(rid), { method:'DELETE' });
-      case 'body':     // DELETE /api/routines  {id}
-        return api('/api/routines', { method:'DELETE', body: JSON.stringify({ id: rid }) });
-      case 'overrideHeader': // POST override header
-        return api('/api/routines/' + encodeURIComponent(rid), {
-          method:'POST', headers:{ 'X-HTTP-Method-Override':'DELETE' }
-        });
-      case 'overrideBody':   // POST override body
-        return api('/api/routines/' + encodeURIComponent(rid), {
-          method:'POST', body: JSON.stringify({ _method:'DELETE' })
-        });
-
-      /* Soft-delete habituales */
-      case 'patchSoft': // PATCH /api/routines/:id  {deleted:true}
-        return api('/api/routines/' + encodeURIComponent(rid), {
-          method:'PATCH', body: JSON.stringify({ deleted:true })
-        });
-      case 'putSoft':   // PUT /api/routines/:id  {deleted:true}
-        return api('/api/routines/' + encodeURIComponent(rid), {
-          method:'PUT', body: JSON.stringify({ deleted:true })
-        });
 
       default:
         return Promise.reject(new Error('Variant desconocida'));
@@ -310,38 +300,37 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   }
 
   function deleteRoutineSmart(rid){
-    var pref = null;
-    try { pref = localStorage.getItem('GB_DELETE_STYLE') || null; } catch(_) {}
-    var order = pref
-      ? [pref,
-         /* no-preflight primero */
-         'actionUrlencoded','collectionUrlencoded','action','postDeleteId','postRemoveId','postRemove','postActionDelete',
-         /* preflight */
-         'rest','qs','body','overrideHeader','overrideBody',
-         /* soft-delete */
-         'patchSoft','putSoft'
-        ].filter(function(v,i,self){return self.indexOf(v)===i;})
-      : ['actionUrlencoded','collectionUrlencoded','action','postDeleteId','postRemoveId','postRemove','postActionDelete',
-         'rest','qs','body','overrideHeader','overrideBody',
-         'patchSoft','putSoft'];
+    // Limpia preferencia antigua para evitar seguir usando variantes peligrosas:
+    try { localStorage.removeItem('GB_DELETE_STYLE'); } catch(_) {}
+
+    var order = [
+      // No-preflight primero (no crean recursos):
+      'actionUrlencoded','collectionUrlencoded','action',
+      'postDeleteId','postRemoveId','postRemove',
+      // Luego DELETE "puro":
+      'rest','qs'
+    ];
 
     function loop(i){
-      if (i >= order.length) return Promise.reject(new Error('No funcionó ninguna variante de borrado'));
+      if (i >= order.length) {
+        return Promise.reject(new Error('No hay endpoint de borrado disponible en el servidor (todas las variantes fallaron)'));
+      }
       var variant = order[i];
       return tryDeleteVariant(rid, variant).then(function(res){
+        // Memoriza sólo variantes seguras
         try { localStorage.setItem('GB_DELETE_STYLE', variant); } catch(_) {}
         return res;
       }).catch(function(err){
         if (/API 404|API 405|API 400|API 415/i.test(err.message)) {
           return loop(i + 1);
         }
-        throw err; // 401/403/500: error real
+        throw err; // 401/403/5xx: error real
       });
     }
     return loop(0);
   }
 
-  // Inspector (igual que antes)
+  // ---- PROBADOR de rutas: OPTIONS/HEAD/GET para ver status y Allow ----
   function probeDeleteRoutes(rid){
     var candidates = [
       { label:'DELETE /api/routines',             method:'OPTIONS', path:'/api/routines' },
@@ -395,7 +384,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
             + '</div>'
             + '<hr style="opacity:.15;margin:12px 0" />'
             + '<div class="row" style="gap:8px;align-items:center;justify-content:center">'
-              + '<button id="del-probe" class="btn secondary">Probar rutas</button>'
+              + '<button id="del-probe" class="btn secondary" title="Probar rutas y métodos disponibles">Probar rutas</button>'
             + '</div>'
           + '</div>',
           function(){
@@ -403,7 +392,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 
             var probeBtn = $("#del-probe");
             if (probeBtn) probeBtn.addEventListener("click", function(){
-              probeBtn.disabled = true; probeBtn.textContent = "Probando…";
+              probeBtn.disabled = true;
+              probeBtn.textContent = "Probando…";
               probeDeleteRoutes(r.id).then(function(rows){
                 var html = '<div class="card"><h4 style="margin:0 0 8px">Diagnóstico de rutas</h4>'
                   + '<table class="diag-table"><thead><tr><th>Ruta</th><th>Método</th><th>Status</th><th>Allow</th></tr></thead><tbody>'
@@ -425,7 +415,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
                   '<div class="card"><p>Error al probar rutas.</p><p class="small">'+escapeHtml(err.message)+'</p><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
                 );
               }).finally(function(){
-                probeBtn.disabled = false; probeBtn.textContent = "Probar rutas";
+                probeBtn.disabled = false;
+                probeBtn.textContent = "Probar rutas";
               });
             });
 
@@ -433,7 +424,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
             if (ok) ok.addEventListener("click", function(){
               deleteRoutineSmart(r.id)
                 .then(function(){
-                  closeModal(); go(Views.ROUTINES);
+                  closeModal();
+                  go(Views.ROUTINES);
                 })
                 .catch(function(err){
                   var hint = '';
@@ -462,7 +454,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     }).join("");
     return '<article class="card" data-rex="'+ x.id +'">' +
            '  <div class="exercise-card">'+ img +
-           '    <div class="info"><h3 style="margin:0 0 4px)">'+ escapeHtml(ex.name||"Ejercicio") +'</h3><div class="small">'+ escapeHtml(ex.bodyPart||"—") +' • <span class="small">'+ escapeHtml(ex.equipment||"") +'</span></div></div>' +
+           '    <div class="info"><h3 style="margin:0 0 4px">'+ escapeHtml(ex.name||"Ejercicio") +'</h3><div class="small">'+ escapeHtml(ex.bodyPart||"—") +' • <span class="small">'+ escapeHtml(ex.equipment||"") +'</span></div></div>' +
            '  </div>' +
            '  <div class="sets">'+ setsHTML +
            '    <div class="row"><button class="btn add-set">Añadir serie</button><button class="btn secondary remove-ex">Quitar ejercicio</button></div>' +
@@ -515,7 +507,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
               .then(function(list){
                 grid.innerHTML = list.map(function(e){
                   var img=e.image?'<img class="thumb" src="'+e.image+'" alt="'+escapeHtml(e.name)+'">':'<div class="thumb">🏋️</div>';
-                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px)">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
+                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
                 }).join("");
                 $$("[data-add]",grid).forEach(function(btn){
                   btn.addEventListener("click", function(){
@@ -582,6 +574,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function completedSetsCount(sess){ return sess.items.reduce(function(a,it){ return a + it.sets.filter(function(s){return !!s.done;}).length; },0); }
   function maxSetsCount(sess){ return sess.items.reduce(function(a,it){ return a + it.sets.length; },0) || 1; }
 
+  /* Header y nav */
   function workoutHeader(){
     var s=STATE.workoutSession, totalSets=maxSetsCount(s), done=completedSetsCount(s), pct=Math.round(100*done/Math.max(1,totalSets));
     var left='<button class="back-btn" id="back-routines-wo"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg><span>Mis rutinas</span></button>';
@@ -601,7 +594,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     return '<article class="card workout-card" data-index="'+idx+'">' +
            '  <div class="exercise-card">'+
            (item.image?'<img class="thumb" src="'+item.image+'" alt="'+escapeHtml(item.name)+'">':'<div class="thumb">🏋️</div>')+
-           '    <div class="info"><h3 style="margin:0 0 6px)">'+escapeHtml(item.name)+'</h3><div class="small">'+escapeHtml(item.bodyPart||"")+'</div></div>' +
+           '    <div class="info"><h3 style="margin:0 0 6px">'+escapeHtml(item.name)+'</h3><div class="small">'+escapeHtml(item.bodyPart||"")+'</div></div>' +
            '  </div>' +
            '  <div class="sets">' +
            item.sets.map(function(s){
@@ -712,6 +705,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     var stage=$("#exercise-stage");
     stage.innerHTML = restHTML();
 
+    // presets
     $$(".rest-preset").forEach(function(b){
       b.addEventListener("click", function(){
         var sec=parseInt(b.getAttribute("data-sec"),10)||0;
@@ -734,6 +728,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     renderRestTime();
   }
 
+  // Cuenta atrás entre ejercicios
   function startRest(totalMs){
     stopRest(true);
     STATE.rest.active = true;
@@ -890,7 +885,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     if(fg) fg.style.strokeDashoffset = String(offset);
   }
 
-  // Handlers de workout
+  // Handlers de workout (incluye disparar descanso por serie)
   function attachWorkoutHandlers(cardEl, item){
     for(var i=0;i<item.sets.length;i++){
       (function(st){
@@ -904,7 +899,13 @@ if (window.__GB_APP_ALREADY_LOADED__) {
           st.done=!st.done; tog.classList.toggle("complete", st.done);
           if(navigator && navigator.vibrate){ try{ navigator.vibrate(30); }catch(_){} }
           updateWorkoutHeader();
-          if (st.done) { openSetRestModal(); }
+
+          // Si se completa una serie, abre descanso entre series (modal)
+          if (st.done) {
+            openSetRestModal();
+          }
+
+          // Avance automático al siguiente ejercicio cuando TODAS las series estén hechas
           checkAutoNext(STATE.workoutSession, item);
         });
       })(item.sets[i]);
@@ -926,7 +927,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         ? '<div class="empty card"><p><strong>Todavía no hay marcas.</strong></p><p>Completa entrenamientos para ver tus PRs.</p></div>'
         : '<section class="grid">' + marks.map(function(m){
             var img=m.image?'<img class="thumb" src="'+m.image+'" alt="'+escapeHtml(m.name)+'">':'<div class="thumb">🏋️</div>';
-            return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 4px)">'+escapeHtml(m.name)+'</h3><div class="small">'+escapeHtml(m.bodyPart||"")+'</div><div class="small">PR: <strong>'+m.pr_weight+'</strong> kg • Reps con PR: <strong>'+m.reps_at_pr+'</strong></div></div></div></article>';
+            return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 4px">'+escapeHtml(m.name)+'</h3><div class="small">'+escapeHtml(m.bodyPart||"")+'</div><div class="small">PR: <strong>'+m.pr_weight+'</strong> kg • Reps con PR: <strong>'+m.reps_at_pr+'</strong></div></div></div></article>';
           }).join("") + '</section>';
       appEl.innerHTML = headerShell(left) + body;
       var bk=$("#back-home-marks"); if(bk) bk.addEventListener("click", function(){ go(Views.HOME); });
@@ -938,6 +939,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     appEl=$("#app"); if(!appEl) return;
     FAB=$("#fab-add"); modalRoot=$("#modal-root"); modalTitle=$("#modal-title"); modalContent=$("#modal-content"); modalClose=$("#modal-close");
     if(FAB) FAB.addEventListener("click", function(){ openCreateRoutine(); });
+    // Limpia estilo de borrado peligroso, por si quedó memorizado
+    try { localStorage.removeItem('GB_DELETE_STYLE'); } catch(_) {}
     render();
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
