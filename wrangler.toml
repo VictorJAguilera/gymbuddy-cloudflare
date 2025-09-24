@@ -1,4 +1,5 @@
 name='gymbuddy-pages'
+main = "src/worker.js"
 compatibility_date='2024-09-01'
 pages_build_output_dir='public'
 
@@ -6,3 +7,7 @@ pages_build_output_dir='public'
 binding='DB'
 database_name='gymbuddy-db1'
 database_id='b00b0a37-661d-41fa-b9b8-30bae4777af2'
+
+[vars]
+# Permite al Worker saber qué origen puede llamar (frontend)
+CORS_ORIGIN = "https://gymbuddy-2025.pages.dev/"   # o "*" durante pruebas
