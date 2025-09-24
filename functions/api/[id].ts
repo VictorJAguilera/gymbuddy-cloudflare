@@ -1,30 +1,53 @@
+// functions/api/routines/[id].ts
 export const onRequestDelete: PagesFunction<{ DB: D1Database }> = async (ctx) => {
   const id = ctx.params.id as string;
-  const now = new Date().toISOString();
-  // Soft delete:
+
   const res = await ctx.env.DB
-    .prepare("UPDATE routines SET deleted = 1, deleted_at = ? WHERE id = ? AND (deleted IS NULL OR deleted = 0)")
-    .bind(now, id)
+    .prepare("DELETE FROM routines WHERE id = ?")
+    .bind(id)
     .run();
-  if (res.meta.changes === 0) {
-    return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
-  }
-  return new Response(null, { status: 204 });
+
+  return new Response(null, {
+    status: res.meta.changes ? 204 : 404,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
 };
 
+// Maneja POST /api/routines/:id/delete (misma acción de borrado por POST)
 export const onRequestPost: PagesFunction<{ DB: D1Database }> = async (ctx) => {
-  // Maneja POST /api/routines/:id/delete
-  if (!ctx.request.url.endsWith("/delete")) {
-    return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+  const url = new URL(ctx.request.url);
+  if (!url.pathname.endsWith("/delete")) {
+    return new Response(JSON.stringify({ error: "not found" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    });
   }
+
   const id = ctx.params.id as string;
-  const now = new Date().toISOString();
+
   const res = await ctx.env.DB
-    .prepare("UPDATE routines SET deleted = 1, deleted_at = ? WHERE id = ? AND (deleted IS NULL OR deleted = 0)")
-    .bind(now, id)
+    .prepare("DELETE FROM routines WHERE id = ?")
+    .bind(id)
     .run();
-  if (res.meta.changes === 0) {
-    return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
-  }
-  return new Response(null, { status: 204 });
+
+  return new Response(null, {
+    status: res.meta.changes ? 204 : 404,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+};
+
+// (Opcional) Soporte CORS preflight si tu cliente hace OPTIONS
+export const onRequestOptions: PagesFunction = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
 };
