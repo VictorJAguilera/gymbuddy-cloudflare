@@ -8,21 +8,16 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 
   /* ---------- Bloqueo de zoom global (pinch/double-tap) ---------- */
   (function(){
-    // Evita zoom por gesto (iOS Safari) y doble-tap. Complementa el meta viewport.
     document.addEventListener('touchstart', function(e){
       if (e.touches && e.touches.length > 1) e.preventDefault();
     }, { passive: false });
-
     document.addEventListener('gesturestart', function(e){
       e.preventDefault();
     }, { passive: false });
-
     var lastTouchTime = 0;
     document.addEventListener('touchend', function(e){
       var now = Date.now();
-      if (now - lastTouchTime <= 300) {
-        e.preventDefault();
-      }
+      if (now - lastTouchTime <= 300) e.preventDefault();
       lastTouchTime = now;
     }, { passive: false });
   })();
@@ -65,11 +60,30 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   /* ---------- Utils ---------- */
   window.__GB_DEBOUNCE_MAP__ = window.__GB_DEBOUNCE_MAP__ || {};
   function debounce(fn, key, wait){ if(wait==null) wait=300; var m=window.__GB_DEBOUNCE_MAP__; if(m[key]) clearTimeout(m[key]); m[key]=setTimeout(fn,wait); }
-  function api(path, opts){ opts=opts||{}; var h=opts.headers||{}; h["Content-Type"]="application/json"; var o={}; for(var k in opts) o[k]=opts[k]; o.headers=h; return fetch(API+path,o).then(function(r){ if(!r.ok) throw new Error("API "+r.status); return r.json(); }); }
+
+  // API robusta: soporta 204/Texto/JSON
+  function api(path, opts){
+    opts = opts || {};
+    var h = opts.headers || {};
+    if (!('Content-Type' in h) && opts.method && opts.method !== 'GET') {
+      h["Content-Type"]="application/json";
+    }
+    var o={}; for(var k in opts) o[k]=opts[k];
+    o.headers=h;
+
+    return fetch(API + path, o).then(function(r){
+      if (!r.ok) throw new Error("API " + r.status);
+      if (r.status === 204) return null;
+      var ct = r.headers.get('content-type') || '';
+      if (ct.indexOf('application/json') !== -1) return r.json();
+      return r.text().then(function(t){ return t || null; });
+    });
+  }
+
   function $(s,r){ return (r||document).querySelector(s); }
   function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
   function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}); }
-  function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;","&gt;":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
+  function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
   function showFAB(b){ var f=FAB||document.getElementById("fab-add"); if(f) f.style.display=b?"grid":"none"; }
 
   // Beep + vibración al terminar
@@ -97,7 +111,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     var prev = STATE.view;
     STATE.view = v;
     render();
-    // WakeLock on/off según vista
     if (prev !== Views.WORKOUT && v === Views.WORKOUT) requestWakeLock();
     if (prev === Views.WORKOUT && v !== Views.WORKOUT) releaseWakeLock();
   }
@@ -231,7 +244,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   /* ---------- EDITAR RUTINA ---------- */
   function renderEditRoutine(routineId){
     showFAB(false);
-    api('/api/routines/'+routineId).then(function(r){
+    api('/api/routines/'+encodeURIComponent(routineId)).then(function(r){
       var exs=r.exercises||[];
       var left='<button class="back-btn" id="back-routines"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg><span>Mis rutinas</span></button>';
       appEl.innerHTML = headerShell(left)
@@ -250,9 +263,9 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 
       var back=$("#back-routines"); if(back) back.addEventListener("click", function(){ go(Views.ROUTINES); });
       var add=$("#add-ex"); if(add) add.addEventListener("click", function(){ openExercisePicker(r.id, function(){ renderEditRoutine(r.id); }); });
-      var save=$("#save-routine"); if(save) save.addEventListener("click", function(){ var payload=collectRoutineFromDOM(r); api('/api/routines/'+r.id,{method:"PUT",body:JSON.stringify(payload)}).then(function(){ go(Views.ROUTINES); }); });
+      var save=$("#save-routine"); if(save) save.addEventListener("click", function(){ var payload=collectRoutineFromDOM(r); api('/api/routines/'+encodeURIComponent(r.id),{method:"PUT",body:JSON.stringify(payload)}).then(function(){ go(Views.ROUTINES); }); });
 
-      // *** Eliminar rutina: confirmación en modal ***
+      // Eliminar rutina con fallbacks
       var del = $("#delete-routine");
       if (del) del.addEventListener("click", function(){
         showModal("Eliminar rutina",
@@ -266,21 +279,38 @@ if (window.__GB_APP_ALREADY_LOADED__) {
           function(){
             var c = $("#del-cancel"); if (c) c.addEventListener("click", closeModal);
             var ok = $("#del-confirm"); if (ok) ok.addEventListener("click", function(){
-              api('/api/routines/'+ r.id, { method: 'DELETE' })
-                .then(function(){
-                  closeModal();
-                  go(Views.ROUTINES);
-                })
-                .catch(function(err){
-                  showModal("Error",
-                    '<div class="card"><p>No se pudo eliminar.</p>'
-                    + '<p class="small">'+ escapeHtml(err.message) +'</p>'
-                    + '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
-                  );
-                });
+              deleteRoutine(r.id).then(function(){
+                closeModal();
+                go(Views.ROUTINES);
+              }).catch(function(err){
+                showModal("Error",
+                  '<div class="card"><p>No se pudo eliminar.</p>'
+                  + '<p class="small">'+ escapeHtml(err.message) +'</p>'
+                  + '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
+                );
+              });
             });
           }
         );
+      });
+    });
+  }
+
+  // Intento resistente para eliminar una rutina en distintos backends
+  function deleteRoutine(id){
+    var rid = encodeURIComponent(id);
+    // 1) DELETE /api/routines/:id
+    return api('/api/routines/' + rid, { method: 'DELETE' }).catch(function(err1){
+      // 2) DELETE /api/routines?id=:id
+      return api('/api/routines?id=' + rid, { method: 'DELETE' }).catch(function(err2){
+        // 3) POST override /api/routines/:id  {_method: 'DELETE'}
+        return api('/api/routines/' + rid, {
+          method: 'POST',
+          body: JSON.stringify({ _method: 'DELETE' })
+        }).catch(function(err3){
+          // 4) POST específico /api/routines/:id/delete
+          return api('/api/routines/' + rid + '/delete', { method: 'POST' });
+        });
       });
     });
   }
@@ -339,7 +369,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function openExercisePicker(routineId, onAfter){
     api("/api/exercises/groups").then(function(groups){
       showModal("Añadir ejercicios",
-        '<div class="row" style="gap:8px; margin-bottom:8px"><input id="search" class="input" placeholder="Buscar por nombre"></div>' +
+        '<div class="row" style="gap:8px, margin-bottom:8px"><input id="search" class="input" placeholder="Buscar por nombre"></div>' +
         '<div class="chips" id="chips"><span class="chip active" data-group="*">Todos</span>' + groups.map(function(g){ return '<span class="chip" data-group="'+ escapeHtml(g) +'">'+ escapeHtml(g) +'</span>'; }).join("") + '</div>' +
         '<div class="row" style="justify-content:space-between;align-items:center;margin:8px 0"><div class="small">Filtra por grupo o busca por texto</div><button id="new-ex" class="btn secondary">+ Crear ejercicio</button></div>' +
         '<div class="grid" id="ex-grid"></div>',
@@ -394,7 +424,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 
   /* ---------- ENTRENAMIENTO + RESTs ---------- */
   function startWorkout(routineId){
-    api('/api/routines/'+routineId).then(function(r){
+    api('/api/routines/'+encodeURIComponent(routineId)).then(function(r){
       var exs=r&&r.exercises?r.exercises:[];
       if(!r || exs.length===0){ STATE.currentRoutineId=routineId; go(Views.EDIT); return; }
       STATE.currentRoutineId=r.id;
@@ -548,7 +578,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     var stage=$("#exercise-stage");
     stage.innerHTML = restHTML();
 
-    // presets
     $$(".rest-preset").forEach(function(b){
       b.addEventListener("click", function(){
         var sec=parseInt(b.getAttribute("data-sec"),10)||0;
@@ -571,7 +600,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     renderRestTime();
   }
 
-  // Cuenta atrás entre ejercicios
   function startRest(totalMs){
     stopRest(true);
     STATE.rest.active = true;
@@ -744,12 +772,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
           if(navigator && navigator.vibrate){ try{ navigator.vibrate(30); }catch(_){} }
           updateWorkoutHeader();
 
-          // Si se completa una serie, abre descanso entre series (modal)
-          if (st.done) {
-            openSetRestModal();
-          }
-
-          // Avance automático al siguiente ejercicio cuando TODAS las series estén hechas
+          if (st.done) { openSetRestModal(); }
           checkAutoNext(STATE.workoutSession, item);
         });
       })(item.sets[i]);
