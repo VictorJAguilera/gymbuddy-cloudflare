@@ -1,7 +1,7 @@
 // functions/api/routines/[id].ts
 
 // DELETE /api/routines/:id  → elimina la fila (hard delete)
-export const onRequestDelete: PagesFunction<{ DB: D1Database }> = async (ctx) => {
+export const onRequestDelete: PagesFunction<{ DB: gymbuddy-db1 }> = async (ctx) => {
   const id = ctx.params.id as string;
 
   const res = await ctx.env.DB
@@ -18,7 +18,7 @@ export const onRequestDelete: PagesFunction<{ DB: D1Database }> = async (ctx) =>
 };
 
 // POST /api/routines/:id/delete  → misma acción por POST
-export const onRequestPost: PagesFunction<{ DB: D1Database }> = async (ctx) => {
+export const onRequestPost: PagesFunction<{ DB: gymbuddy-db1 }> = async (ctx) => {
   const url = new URL(ctx.request.url);
 
   // Acepta /delete y /delete/
