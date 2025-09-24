@@ -92,20 +92,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     });
   }
 
-  // fetchRaw para probing sin imponer JSON por defecto
-  function fetchRaw(path, opts){
-    opts = opts || {};
-    var url = API + path;
-    return fetch(url, opts).then(function(r){
-      var allow = r.headers.get('Allow') || r.headers.get('allow') || '';
-      return r.text().then(function(t){
-        return { url:url, status:r.status, ok:r.ok, allow:allow, body:(t||'') };
-      });
-    }).catch(function(err){
-      return { url:url, status:0, ok:false, allow:'', body:String(err && err.message || err) };
-    });
-  }
-
   // Beep + vibración al terminar descansos
   function restDoneFeedback(){
     if (navigator.vibrate) { try { navigator.vibrate([60,40,60]); } catch(_){} }
@@ -234,7 +220,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     '    </div>' +
     '    <div class="row" style="gap:8px">' +
     '      <button class="btn icon secondary" aria-label="Editar rutina" data-edit="'+ r.id +'" title="Editar (⚙️)">' +
-    '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0,.12-.64Z"/></svg>' +
+    '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a.5.5,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0,.12-.64Z"/></svg>' +
     '      </button>' +
     '      <button class="btn icon" aria-label="Empezar entrenamiento" data-play="'+ r.id +'" title="Empezar (▶)">' +
     '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>' +
@@ -263,93 +249,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
-  /* ---------- DELETE seguro: sólo rutas que NO pueden crear ---------- */
-  function tryDeleteVariant(rid, variant){
-    switch(variant){
-      // No-preflight (POST simples a endpoints de acción):
-      case 'actionUrlencoded': // POST /api/routines/:id/delete  id=RID (x-www-form-urlencoded)
-        return api('/api/routines/' + encodeURIComponent(rid) + '/delete', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
-          body:'id=' + encodeURIComponent(rid)
-        });
-      case 'collectionUrlencoded': // POST /api/routines/delete  id=RID (x-www-form-urlencoded)
-        return api('/api/routines/delete', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
-          body:'id=' + encodeURIComponent(rid)
-        });
-      case 'action': // POST /api/routines/:id/delete  (sin body)
-        return api('/api/routines/' + encodeURIComponent(rid) + '/delete', { method:'POST' });
-      case 'postDeleteId': // POST /api/routines/delete/:id
-        return api('/api/routines/delete/' + encodeURIComponent(rid), { method:'POST' });
-      case 'postRemoveId': // POST /api/routines/remove/:id
-        return api('/api/routines/remove/' + encodeURIComponent(rid), { method:'POST' });
-      case 'postRemove': // POST /api/routines/remove  {id}
-        return api('/api/routines/remove', { method:'POST', body: JSON.stringify({ id: rid }) });
-
-      // Con preflight (si el backend lo soporta):
-      case 'rest': // DELETE /api/routines/:id
-        return api('/api/routines/' + encodeURIComponent(rid), { method:'DELETE' });
-      case 'qs':   // DELETE /api/routines?id=RID
-        return api('/api/routines?id=' + encodeURIComponent(rid), { method:'DELETE' });
-
-      default:
-        return Promise.reject(new Error('Variant desconocida'));
-    }
-  }
-
-  function deleteRoutineSmart(rid){
-    // Limpia preferencia antigua para evitar seguir usando variantes peligrosas:
-    try { localStorage.removeItem('GB_DELETE_STYLE'); } catch(_) {}
-
-    var order = [
-      // No-preflight primero (no crean recursos):
-      'actionUrlencoded','collectionUrlencoded','action',
-      'postDeleteId','postRemoveId','postRemove',
-      // Luego DELETE "puro":
-      'rest','qs'
-    ];
-
-    function loop(i){
-      if (i >= order.length) {
-        return Promise.reject(new Error('No hay endpoint de borrado disponible en el servidor (todas las variantes fallaron)'));
-      }
-      var variant = order[i];
-      return tryDeleteVariant(rid, variant).then(function(res){
-        // Memoriza sólo variantes seguras
-        try { localStorage.setItem('GB_DELETE_STYLE', variant); } catch(_) {}
-        return res;
-      }).catch(function(err){
-        if (/API 404|API 405|API 400|API 415/i.test(err.message)) {
-          return loop(i + 1);
-        }
-        throw err; // 401/403/5xx: error real
-      });
-    }
-    return loop(0);
-  }
-
-  // ---- PROBADOR de rutas: OPTIONS/HEAD/GET para ver status y Allow ----
-  function probeDeleteRoutes(rid){
-    var candidates = [
-      { label:'DELETE /api/routines',             method:'OPTIONS', path:'/api/routines' },
-      { label:'DELETE /api/routines/:id',         method:'OPTIONS', path:'/api/routines/'+encodeURIComponent(rid) },
-      { label:'POST /api/routines/:id/delete',    method:'OPTIONS', path:'/api/routines/'+encodeURIComponent(rid)+'/delete' },
-      { label:'POST /api/routines/delete',        method:'OPTIONS', path:'/api/routines/delete' },
-      { label:'POST /api/routines/delete/:id',    method:'OPTIONS', path:'/api/routines/delete/'+encodeURIComponent(rid) },
-      { label:'POST /api/routines/remove/:id',    method:'OPTIONS', path:'/api/routines/remove/'+encodeURIComponent(rid) },
-      { label:'GET /api/routines/:id',            method:'GET',     path:'/api/routines/'+encodeURIComponent(rid) },
-      { label:'HEAD /api/routines/:id',           method:'HEAD',    path:'/api/routines/'+encodeURIComponent(rid) },
-    ];
-    return Promise.all(candidates.map(function(c){
-      return fetchRaw(c.path, { method:c.method }).then(function(r){
-        return { label:c.label, method:c.method, path:c.path, status:r.status, allow:r.allow };
-      });
-    }));
-  }
-
-  /* ---------- EDITAR RUTINA ---------- */
+  /* ---------- EDITAR RUTINA (incluye borrado estilo ejercicios/sets) ---------- */
   function renderEditRoutine(routineId){
     showFAB(false);
     api('/api/routines/'+encodeURIComponent(routineId)).then(function(r){
@@ -382,58 +282,20 @@ if (window.__GB_APP_ALREADY_LOADED__) {
               + '<button id="del-cancel" class="btn secondary">Cancelar</button>'
               + '<button id="del-confirm" class="btn danger">Aceptar</button>'
             + '</div>'
-            + '<hr style="opacity:.15;margin:12px 0" />'
-            + '<div class="row" style="gap:8px;align-items:center;justify-content:center">'
-              + '<button id="del-probe" class="btn secondary" title="Probar rutas y métodos disponibles">Probar rutas</button>'
-            + '</div>'
           + '</div>',
           function(){
             var c = $("#del-cancel"); if (c) c.addEventListener("click", closeModal);
-
-            var probeBtn = $("#del-probe");
-            if (probeBtn) probeBtn.addEventListener("click", function(){
-              probeBtn.disabled = true;
-              probeBtn.textContent = "Probando…";
-              probeDeleteRoutes(r.id).then(function(rows){
-                var html = '<div class="card"><h4 style="margin:0 0 8px">Diagnóstico de rutas</h4>'
-                  + '<table class="diag-table"><thead><tr><th>Ruta</th><th>Método</th><th>Status</th><th>Allow</th></tr></thead><tbody>'
-                  + rows.map(function(x){
-                      var badge = x.status >=200 && x.status<300 ? 'ok' : (x.status===405 ? 'warn' : 'err');
-                      return '<tr>'
-                        + '<td>'+escapeHtml(x.path)+'</td>'
-                        + '<td>'+escapeHtml(x.method)+'</td>'
-                        + '<td><span class="badge '+badge+'">'+x.status+'</span></td>'
-                        + '<td style="white-space:nowrap">'+escapeHtml(x.allow||'')+'</td>'
-                        + '</tr>';
-                    }).join('')
-                  + '</tbody></table>'
-                  + '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div>'
-                  + '</div>';
-                showModal("Inspector de API", html);
-              }).catch(function(err){
-                showModal("Inspector de API",
-                  '<div class="card"><p>Error al probar rutas.</p><p class="small">'+escapeHtml(err.message)+'</p><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
-                );
-              }).finally(function(){
-                probeBtn.disabled = false;
-                probeBtn.textContent = "Probar rutas";
-              });
-            });
-
             var ok = $("#del-confirm");
             if (ok) ok.addEventListener("click", function(){
-              deleteRoutineSmart(r.id)
+              // BORRADO *idéntico en estilo* al de ejercicios/sets:
+              api('/api/routines/' + encodeURIComponent(r.id), { method:'DELETE' })
                 .then(function(){
                   closeModal();
                   go(Views.ROUTINES);
                 })
                 .catch(function(err){
-                  var hint = '';
-                  try { hint = localStorage.getItem('GB_DELETE_STYLE') || ''; } catch(_) {}
-                  showModal("Error",
-                    '<div class="card"><p>No se pudo eliminar (borrado).</p>'
-                    + '<p class="small">'+ escapeHtml(err.message) + (hint ? ' • último intento: ' + escapeHtml(hint) : '') +'</p>'
-                    + '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
+                  showModal("Error al eliminar",
+                    '<div class="card"><p>No se pudo eliminar la rutina.</p><p class="small">'+escapeHtml(err.message)+'</p><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
                   );
                 });
             });
@@ -507,7 +369,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
               .then(function(list){
                 grid.innerHTML = list.map(function(e){
                   var img=e.image?'<img class="thumb" src="'+e.image+'" alt="'+escapeHtml(e.name)+'">':'<div class="thumb">🏋️</div>';
-                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
+                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px)">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
                 }).join("");
                 $$("[data-add]",grid).forEach(function(btn){
                   btn.addEventListener("click", function(){
@@ -927,7 +789,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         ? '<div class="empty card"><p><strong>Todavía no hay marcas.</strong></p><p>Completa entrenamientos para ver tus PRs.</p></div>'
         : '<section class="grid">' + marks.map(function(m){
             var img=m.image?'<img class="thumb" src="'+m.image+'" alt="'+escapeHtml(m.name)+'">':'<div class="thumb">🏋️</div>';
-            return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 4px">'+escapeHtml(m.name)+'</h3><div class="small">'+escapeHtml(m.bodyPart||"")+'</div><div class="small">PR: <strong>'+m.pr_weight+'</strong> kg • Reps con PR: <strong>'+m.reps_at_pr+'</strong></div></div></div></article>';
+            return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 4px)">'+escapeHtml(m.name)+'</h3><div class="small">'+escapeHtml(m.bodyPart||"")+'</div><div class="small">PR: <strong>'+m.pr_weight+'</strong> kg • Reps con PR: <strong>'+m.reps_at_pr+'</strong></div></div></div></article>';
           }).join("") + '</section>';
       appEl.innerHTML = headerShell(left) + body;
       var bk=$("#back-home-marks"); if(bk) bk.addEventListener("click", function(){ go(Views.HOME); });
@@ -939,8 +801,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     appEl=$("#app"); if(!appEl) return;
     FAB=$("#fab-add"); modalRoot=$("#modal-root"); modalTitle=$("#modal-title"); modalContent=$("#modal-content"); modalClose=$("#modal-close");
     if(FAB) FAB.addEventListener("click", function(){ openCreateRoutine(); });
-    // Limpia estilo de borrado peligroso, por si quedó memorizado
-    try { localStorage.removeItem('GB_DELETE_STYLE'); } catch(_) {}
     render();
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
