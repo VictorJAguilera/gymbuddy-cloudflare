@@ -286,19 +286,31 @@ if (window.__GB_APP_ALREADY_LOADED__) {
           function(){
             var c = $("#del-cancel"); if (c) c.addEventListener("click", closeModal);
             var ok = $("#del-confirm");
-            if (ok) ok.addEventListener("click", function(){
-              // BORRADO *idéntico en estilo* al de ejercicios/sets:
-              api('/api/routines/' + encodeURIComponent(r.id), { method:'DELETE' })
-                .then(function(){
-                  closeModal();
-                  go(Views.ROUTINES);
-                })
-                .catch(function(err){
-                  showModal("Error al eliminar",
-                    '<div class="card"><p>No se pudo eliminar la rutina.</p><p class="small">'+escapeHtml(err.message)+'</p><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
-                  );
-                });
-            });
+if (ok) ok.addEventListener("click", function(){
+  // 1) Intento principal: POST de acción (suele evitar CORS/preflight)
+  api('/api/routines/' + encodeURIComponent(r.id) + '/delete', { method:'POST' })
+    .then(function(){
+      closeModal();
+      go(Views.ROUTINES);
+    })
+    .catch(function(err){
+      // Si el Worker no tiene esa ruta, probamos DELETE canónico.
+      if (/API 404|API 405/i.test(err.message)) {
+        return api('/api/routines/' + encodeURIComponent(r.id), { method:'DELETE' })
+          .then(function(){
+            closeModal();
+            go(Views.ROUTINES);
+          });
+      }
+      // Otro error real
+      throw err;
+    })
+    .catch(function(err2){
+      showModal("Error al eliminar",
+        '<div class="card"><p>No se pudo eliminar la rutina.</p><p class="small">'+escapeHtml(err2.message)+'</p><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
+      );
+    });
+});
           }
         );
       });
