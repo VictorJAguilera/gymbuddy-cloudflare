@@ -9,14 +9,21 @@
   <link rel="preconnect" href="https://images.unsplash.com" />
   <link rel="stylesheet" href="/styles.css?v=ui2025-rt3" />
 
-  <!-- Estilos mínimos para el botón de eliminar y utilidades -->
+  <!-- Estilos mínimos añadidos -->
   <style>
     .btn.danger { background:#D32F2F; color:#fff; border:none; }
     .btn.danger:hover { filter:brightness(0.95); }
     .btn.danger:active { filter:brightness(0.9); }
     .space { flex:1 1 auto; }
-    /* Compat iOS: evitar zoom al enfocar inputs */
+    /* iOS: evitar zoom al enfocar inputs */
     input, select, textarea { font-size:16px; }
+    /* Tabla de diagnóstico */
+    .diag-table { width:100%; border-collapse:collapse; }
+    .diag-table th, .diag-table td { border:1px solid rgba(255,255,255,.1); padding:6px 8px; font-size:12px; }
+    .diag-table th { text-align:left; opacity:.8; }
+    .badge.ok { background:#2e7d32; color:#fff; padding:2px 6px; border-radius:6px; font-size:12px; }
+    .badge.warn { background:#ff8f00; color:#000; padding:2px 6px; border-radius:6px; font-size:12px; }
+    .badge.err { background:#c62828; color:#fff; padding:2px 6px; border-radius:6px; font-size:12px; }
   </style>
 </head>
 <body>
