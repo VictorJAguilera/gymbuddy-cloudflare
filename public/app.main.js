@@ -218,7 +218,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     '    </div>' +
     '    <div class="row" style="gap:8px">' +
     '      <button class="btn icon secondary" aria-label="Editar rutina" data-edit="'+ r.id +'" title="Editar (⚙️)">' +
-    '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0,.12-.64Z"/></svg>' +
+    '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M19.14,12.94a7.14,7.14,0,0,0,.05-1l1.67-1.3a.5.5,0,0,0,.12-.64l-1.58-2.73a.5.5,0,0,0-.6-.22l-2,.8a6.81,6.81,0,0,0-1.73-1l-.3-2.1a.5.5,0,0,0-.5-.42H10.73a.5.5,0,0,0-.5.42l-.3,2.1a6.81,6.81,0,0,0-1.73,1l-2-.8a.5.5,0,0,0-.6.22L3,10a.5.5,0,0,0,.12.64L4.79,12a7.14,7.14,0,0,0,0,2L3.14,15.3A.5.5,0,0,0,3,15.94l1.58,2.73a.5.5,0,0,0,.6.22l2,.8a6.81,6.81,0,0,0,1.73,1l.3,2.1a.5.5,0,0,0,.5.42h3.06a.5.5,0,0,0,.5-.42l.3-2.1a6.81,6.81,0,0,0,1.73-1l2,.8a.5.5,0,0,0,.6-.22l1.58-2.73a.5.5,0,0,0-.12-.64Z"/></svg>' +
     '      </button>' +
     '      <button class="btn icon" aria-label="Empezar entrenamiento" data-play="'+ r.id +'" title="Empezar (▶)">' +
     '        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>' +
@@ -247,6 +247,47 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
+  /* ---------- DELETE inteligente con fallback ---------- */
+  function tryDeleteVariant(rid, variant){
+    switch(variant){
+      case 'body':     // DELETE /api/routines  {id}
+        return api('/api/routines', { method:'DELETE', body: JSON.stringify({ id: rid }) });
+      case 'rest':     // DELETE /api/routines/:id
+        return api('/api/routines/' + encodeURIComponent(rid), { method:'DELETE' });
+      case 'override': // POST /api/routines/:id  {"_method":"DELETE"}
+        return api('/api/routines/' + encodeURIComponent(rid), { method:'POST', body: JSON.stringify({ _method:'DELETE' }) });
+      case 'action':   // POST /api/routines/:id/delete
+        return api('/api/routines/' + encodeURIComponent(rid) + '/delete', { method:'POST' });
+      default:
+        return Promise.reject(new Error('Variant desconocida'));
+    }
+  }
+  function deleteRoutineSmart(rid){
+    var pref = null;
+    try { pref = localStorage.getItem('GB_DELETE_STYLE') || null; } catch(_) {}
+    var order = pref
+      ? [pref, 'body','rest','override','action'].filter(function(v, i, self){ return self.indexOf(v) === i; })
+      : ['body','rest','override','action'];
+
+    function loop(i){
+      if (i >= order.length) {
+        return Promise.reject(new Error('No funcionó ninguna variante de borrado'));
+      }
+      var variant = order[i];
+      return tryDeleteVariant(rid, variant).then(function(res){
+        try { localStorage.setItem('GB_DELETE_STYLE', variant); } catch(_) {}
+        return res;
+      }).catch(function(err){
+        // Si es 404/405/400/415 prueba siguiente; otros errores se propagan
+        if (/API 404|API 405|API 400|API 415/i.test(err.message)) {
+          return loop(i + 1);
+        }
+        throw err;
+      });
+    }
+    return loop(0);
+  }
+
   /* ---------- EDITAR RUTINA ---------- */
   function renderEditRoutine(routineId){
     showFAB(false);
@@ -271,7 +312,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       var add=$("#add-ex"); if(add) add.addEventListener("click", function(){ openExercisePicker(r.id, function(){ renderEditRoutine(r.id); }); });
       var save=$("#save-routine"); if(save) save.addEventListener("click", function(){ var payload=collectRoutineFromDOM(r); api('/api/routines/'+encodeURIComponent(r.id),{method:"PUT",body:JSON.stringify(payload)}).then(function(){ go(Views.ROUTINES); }); });
 
-      // Eliminar rutina: MISMA ESTRUCTURA QUE CREATE -> DELETE /api/routines con { id }
+      // Eliminar rutina: intenta igual que create y cae a variantes si 404/405
       var del = $("#delete-routine");
       if (del) del.addEventListener("click", function(){
         showModal("Eliminar rutina",
@@ -285,21 +326,20 @@ if (window.__GB_APP_ALREADY_LOADED__) {
           function(){
             var c = $("#del-cancel"); if (c) c.addEventListener("click", closeModal);
             var ok = $("#del-confirm"); if (ok) ok.addEventListener("click", function(){
-              api('/api/routines', {
-                method: 'DELETE',
-                body: JSON.stringify({ id: r.id })
-              })
-              .then(function(){
-                closeModal();
-                go(Views.ROUTINES);
-              })
-              .catch(function(err){
-                showModal("Error",
-                  '<div class="card"><p>No se pudo eliminar.</p>'
-                  + '<p class="small">'+ escapeHtml(err.message) +'</p>'
-                  + '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
-                );
-              });
+              deleteRoutineSmart(r.id)
+                .then(function(){
+                  closeModal();
+                  go(Views.ROUTINES);
+                })
+                .catch(function(err){
+                  var hint = '';
+                  try { hint = localStorage.getItem('GB_DELETE_STYLE') || ''; } catch(_) {}
+                  showModal("Error",
+                    '<div class="card"><p>No se pudo eliminar.</p>'
+                    + '<p class="small">'+ escapeHtml(err.message) + (hint ? ' • último intento: ' + escapeHtml(hint) : '') +'</p>'
+                    + '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
+                  );
+                });
             });
           }
         );
@@ -786,7 +826,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         ? '<div class="empty card"><p><strong>Todavía no hay marcas.</strong></p><p>Completa entrenamientos para ver tus PRs.</p></div>'
         : '<section class="grid">' + marks.map(function(m){
             var img=m.image?'<img class="thumb" src="'+m.image+'" alt="'+escapeHtml(m.name)+'">':'<div class="thumb">🏋️</div>';
-            return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 4px">'+escapeHtml(m.name)+'</h3><div class="small">'+escapeHtml(m.bodyPart||"")+'</div><div class="small">PR: <strong>'+m.pr_weight+'</strong> kg • Reps con PR: <strong>'+m.reps_at_pr+'</strong></div></div></div></article>';
+            return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 4px)">'+escapeHtml(m.name)+'</h3><div class="small">'+escapeHtml(m.bodyPart||"")+'</div><div class="small">PR: <strong>'+m.pr_weight+'</strong> kg • Reps con PR: <strong>'+m.reps_at_pr+'</strong></div></div></div></article>';
           }).join("") + '</section>';
       appEl.innerHTML = headerShell(left) + body;
       var bk=$("#back-home-marks"); if(bk) bk.addEventListener("click", function(){ go(Views.HOME); });
