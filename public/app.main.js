@@ -1,12 +1,11 @@
-/* GymBuddy core — UI 2025 + Rest entre ejercicios y entre series (cuenta atrás),
-   Beep + vibración al terminar, Wake Lock, Nav superior */
+/* GymBuddy core — UI 2025 + Rest entre ejercicios/series, beep+vibración, Wake Lock, Nav superior */
 
 if (window.__GB_APP_ALREADY_LOADED__) {
   console.warn('GymBuddy core ya cargado — omito reevaluación');
 } else {
   window.__GB_APP_ALREADY_LOADED__ = true;
 
-  /* ---------- Bloqueo de zoom global (pinch/double-tap) ---------- */
+  /* ---------- Bloqueo de zoom global ---------- */
   (function(){
     document.addEventListener('touchstart', function(e){
       if (e.touches && e.touches.length > 1) e.preventDefault();
@@ -58,8 +57,13 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   /* ---------- Utils ---------- */
   window.__GB_DEBOUNCE_MAP__ = window.__GB_DEBOUNCE_MAP__ || {};
   function debounce(fn, key, wait){ if(wait==null) wait=300; var m=window.__GB_DEBOUNCE_MAP__; if(m[key]) clearTimeout(m[key]); m[key]=setTimeout(fn,wait); }
+  function $(s,r){ return (r||document).querySelector(s); }
+  function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+  function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}); }
+  function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
+  function showFAB(b){ var f=FAB||document.getElementById("fab-add"); if(f) f.style.display=b?"grid":"none"; }
 
-  // API robusta: soporta 204/Texto/JSON y muestra texto del servidor
+  // API robusta
   function api(path, opts){
     opts = opts || {};
     var h = opts.headers || {};
@@ -82,8 +86,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       return r.text().then(function(t){ return t || null; });
     });
   }
-
-  // fetchRaw para probing sin imponer JSON por defecto
   function fetchRaw(path, opts){
     opts = opts || {};
     var url = API + path;
@@ -96,12 +98,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       return { url:url, status:0, ok:false, allow:'', body:String(err && err.message || err) };
     });
   }
-
-  function $(s,r){ return (r||document).querySelector(s); }
-  function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
-  function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}); }
-  function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;"," >":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
-  function showFAB(b){ var f=FAB||document.getElementById("fab-add"); if(f) f.style.display=b?"grid":"none"; }
 
   // Beep + vibración
   function restDoneFeedback(){
@@ -257,41 +253,57 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
-  /* ---------- DELETE inteligente (prioriza no-preflight) ---------- */
+  /* ---------- DELETE inteligente: más variantes ---------- */
   function tryDeleteVariant(rid, variant){
     switch(variant){
-      // 1) No-preflight candidatos (POST simple, x-www-form-urlencoded o sin body)
+      /* No-preflight típicos (POST simples) */
       case 'actionUrlencoded': // POST /api/routines/:id/delete  id=RID
         return api('/api/routines/' + encodeURIComponent(rid) + '/delete', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+          method:'POST', headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
           body:'id=' + encodeURIComponent(rid)
         });
       case 'collectionUrlencoded': // POST /api/routines/delete  id=RID
         return api('/api/routines/delete', {
-          method:'POST',
-          headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+          method:'POST', headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
           body:'id=' + encodeURIComponent(rid)
         });
-      case 'action':   // POST /api/routines/:id/delete  (sin body)
+      case 'action':   // POST /api/routines/:id/delete
         return api('/api/routines/' + encodeURIComponent(rid) + '/delete', { method:'POST' });
+      case 'postDeleteId': // POST /api/routines/delete/:id
+        return api('/api/routines/delete/' + encodeURIComponent(rid), { method:'POST' });
+      case 'postRemoveId': // POST /api/routines/remove/:id
+        return api('/api/routines/remove/' + encodeURIComponent(rid), { method:'POST' });
+      case 'postRemove': // POST /api/routines/remove  {id}
+        return api('/api/routines/remove', { method:'POST', body: JSON.stringify({ id: rid }) });
+      case 'postActionDelete': // POST /api/routines  {action:'delete', id}
+        return api('/api/routines', { method:'POST', body: JSON.stringify({ action:'delete', id: rid }) });
 
-      // 2) Con preflight (si el backend lo soporta)
+      /* Con preflight (si está soportado) */
       case 'rest':     // DELETE /api/routines/:id
         return api('/api/routines/' + encodeURIComponent(rid), { method:'DELETE' });
       case 'qs':       // DELETE /api/routines?id=RID
         return api('/api/routines?id=' + encodeURIComponent(rid), { method:'DELETE' });
       case 'body':     // DELETE /api/routines  {id}
         return api('/api/routines', { method:'DELETE', body: JSON.stringify({ id: rid }) });
-      case 'overrideHeader': // POST /api/routines/:id  (X-HTTP-Method-Override: DELETE)
+      case 'overrideHeader': // POST override header
         return api('/api/routines/' + encodeURIComponent(rid), {
-          method:'POST',
-          headers:{ 'X-HTTP-Method-Override':'DELETE' }
+          method:'POST', headers:{ 'X-HTTP-Method-Override':'DELETE' }
         });
-      case 'overrideBody':   // POST /api/routines/:id  {"_method":"DELETE"}
-        return api('/api/routines/' + encodeURIComponent(rid), { method:'POST', body: JSON.stringify({ _method:'DELETE' }) });
-      case 'collectionDelete': // POST /api/routines/delete  {id}
-        return api('/api/routines/delete', { method:'POST', body: JSON.stringify({ id: rid }) });
+      case 'overrideBody':   // POST override body
+        return api('/api/routines/' + encodeURIComponent(rid), {
+          method:'POST', body: JSON.stringify({ _method:'DELETE' })
+        });
+
+      /* Soft-delete habituales */
+      case 'patchSoft': // PATCH /api/routines/:id  {deleted:true}
+        return api('/api/routines/' + encodeURIComponent(rid), {
+          method:'PATCH', body: JSON.stringify({ deleted:true })
+        });
+      case 'putSoft':   // PUT /api/routines/:id  {deleted:true}
+        return api('/api/routines/' + encodeURIComponent(rid), {
+          method:'PUT', body: JSON.stringify({ deleted:true })
+        });
+
       default:
         return Promise.reject(new Error('Variant desconocida'));
     }
@@ -302,11 +314,16 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     try { pref = localStorage.getItem('GB_DELETE_STYLE') || null; } catch(_) {}
     var order = pref
       ? [pref,
-         'actionUrlencoded','collectionUrlencoded','action',
-         'rest','qs','body','overrideHeader','overrideBody','collectionDelete']
-         .filter(function(v,i,self){return self.indexOf(v)===i;})
-      : ['actionUrlencoded','collectionUrlencoded','action',
-         'rest','qs','body','overrideHeader','overrideBody','collectionDelete'];
+         /* no-preflight primero */
+         'actionUrlencoded','collectionUrlencoded','action','postDeleteId','postRemoveId','postRemove','postActionDelete',
+         /* preflight */
+         'rest','qs','body','overrideHeader','overrideBody',
+         /* soft-delete */
+         'patchSoft','putSoft'
+        ].filter(function(v,i,self){return self.indexOf(v)===i;})
+      : ['actionUrlencoded','collectionUrlencoded','action','postDeleteId','postRemoveId','postRemove','postActionDelete',
+         'rest','qs','body','overrideHeader','overrideBody',
+         'patchSoft','putSoft'];
 
     function loop(i){
       if (i >= order.length) return Promise.reject(new Error('No funcionó ninguna variante de borrado'));
@@ -324,15 +341,17 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     return loop(0);
   }
 
-  // ---- PROBADOR de rutas: OPTIONS/HEAD/GET para ver status y Allow ----
+  // Inspector (igual que antes)
   function probeDeleteRoutes(rid){
     var candidates = [
-      { label:'DELETE /api/routines',         method:'OPTIONS', path:'/api/routines' },
-      { label:'DELETE /api/routines/:id',     method:'OPTIONS', path:'/api/routines/'+encodeURIComponent(rid) },
-      { label:'POST /api/routines/:id/delete',method:'OPTIONS', path:'/api/routines/'+encodeURIComponent(rid)+'/delete' },
-      { label:'POST /api/routines/delete',    method:'OPTIONS', path:'/api/routines/delete' },
-      { label:'GET /api/routines/:id',        method:'GET',     path:'/api/routines/'+encodeURIComponent(rid) },
-      { label:'HEAD /api/routines/:id',       method:'HEAD',    path:'/api/routines/'+encodeURIComponent(rid) },
+      { label:'DELETE /api/routines',             method:'OPTIONS', path:'/api/routines' },
+      { label:'DELETE /api/routines/:id',         method:'OPTIONS', path:'/api/routines/'+encodeURIComponent(rid) },
+      { label:'POST /api/routines/:id/delete',    method:'OPTIONS', path:'/api/routines/'+encodeURIComponent(rid)+'/delete' },
+      { label:'POST /api/routines/delete',        method:'OPTIONS', path:'/api/routines/delete' },
+      { label:'POST /api/routines/delete/:id',    method:'OPTIONS', path:'/api/routines/delete/'+encodeURIComponent(rid) },
+      { label:'POST /api/routines/remove/:id',    method:'OPTIONS', path:'/api/routines/remove/'+encodeURIComponent(rid) },
+      { label:'GET /api/routines/:id',            method:'GET',     path:'/api/routines/'+encodeURIComponent(rid) },
+      { label:'HEAD /api/routines/:id',           method:'HEAD',    path:'/api/routines/'+encodeURIComponent(rid) },
     ];
     return Promise.all(candidates.map(function(c){
       return fetchRaw(c.path, { method:c.method }).then(function(r){
@@ -376,7 +395,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
             + '</div>'
             + '<hr style="opacity:.15;margin:12px 0" />'
             + '<div class="row" style="gap:8px;align-items:center;justify-content:center">'
-              + '<button id="del-probe" class="btn secondary" title="Probar rutas y métodos disponibles">Probar rutas</button>'
+              + '<button id="del-probe" class="btn secondary">Probar rutas</button>'
             + '</div>'
           + '</div>',
           function(){
@@ -384,8 +403,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 
             var probeBtn = $("#del-probe");
             if (probeBtn) probeBtn.addEventListener("click", function(){
-              probeBtn.disabled = true;
-              probeBtn.textContent = "Probando…";
+              probeBtn.disabled = true; probeBtn.textContent = "Probando…";
               probeDeleteRoutes(r.id).then(function(rows){
                 var html = '<div class="card"><h4 style="margin:0 0 8px">Diagnóstico de rutas</h4>'
                   + '<table class="diag-table"><thead><tr><th>Ruta</th><th>Método</th><th>Status</th><th>Allow</th></tr></thead><tbody>'
@@ -407,8 +425,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
                   '<div class="card"><p>Error al probar rutas.</p><p class="small">'+escapeHtml(err.message)+'</p><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
                 );
               }).finally(function(){
-                probeBtn.disabled = false;
-                probeBtn.textContent = "Probar rutas";
+                probeBtn.disabled = false; probeBtn.textContent = "Probar rutas";
               });
             });
 
@@ -416,8 +433,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
             if (ok) ok.addEventListener("click", function(){
               deleteRoutineSmart(r.id)
                 .then(function(){
-                  closeModal();
-                  go(Views.ROUTINES);
+                  closeModal(); go(Views.ROUTINES);
                 })
                 .catch(function(err){
                   var hint = '';
@@ -446,7 +462,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     }).join("");
     return '<article class="card" data-rex="'+ x.id +'">' +
            '  <div class="exercise-card">'+ img +
-           '    <div class="info"><h3 style="margin:0 0 4px">'+ escapeHtml(ex.name||"Ejercicio") +'</h3><div class="small">'+ escapeHtml(ex.bodyPart||"—") +' • <span class="small">'+ escapeHtml(ex.equipment||"") +'</span></div></div>' +
+           '    <div class="info"><h3 style="margin:0 0 4px)">'+ escapeHtml(ex.name||"Ejercicio") +'</h3><div class="small">'+ escapeHtml(ex.bodyPart||"—") +' • <span class="small">'+ escapeHtml(ex.equipment||"") +'</span></div></div>' +
            '  </div>' +
            '  <div class="sets">'+ setsHTML +
            '    <div class="row"><button class="btn add-set">Añadir serie</button><button class="btn secondary remove-ex">Quitar ejercicio</button></div>' +
@@ -566,7 +582,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function completedSetsCount(sess){ return sess.items.reduce(function(a,it){ return a + it.sets.filter(function(s){return !!s.done;}).length; },0); }
   function maxSetsCount(sess){ return sess.items.reduce(function(a,it){ return a + it.sets.length; },0) || 1; }
 
-  /* Header y nav */
   function workoutHeader(){
     var s=STATE.workoutSession, totalSets=maxSetsCount(s), done=completedSetsCount(s), pct=Math.round(100*done/Math.max(1,totalSets));
     var left='<button class="back-btn" id="back-routines-wo"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg><span>Mis rutinas</span></button>';
