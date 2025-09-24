@@ -9,10 +9,8 @@
 .btn.danger:hover { filter: brightness(0.95); }
 .btn.danger:active { filter: brightness(0.9); }
 
-/* Separador flexible para empujar el botón rojo a la derecha si hace falta */
+/* Separador flexible para alinear acciones */
 .space { flex: 1 1 auto; }
 
-/* (Compat) Evita que iOS haga zoom al enfocar inputs pequeños */
-input, select, textarea {
-  font-size: 16px;
-}
+/* Compat: evita zoom al enfocar inputs pequeños en iOS antiguos */
+input, select, textarea { font-size: 16px; }
