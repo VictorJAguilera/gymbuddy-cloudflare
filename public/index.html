@@ -8,8 +8,16 @@
   <meta name="theme-color" content="#161A20" />
   <link rel="preconnect" href="https://images.unsplash.com" />
   <link rel="stylesheet" href="/styles.css?v=ui2025-rt3" />
-  <!-- CSS extra con clases nuevas -->
-  <link rel="stylesheet" href="/styles-extra.css?v=ui2025-rt3" />
+
+  <!-- Estilos mínimos para el botón de eliminar y utilidades -->
+  <style>
+    .btn.danger { background:#D32F2F; color:#fff; border:none; }
+    .btn.danger:hover { filter:brightness(0.95); }
+    .btn.danger:active { filter:brightness(0.9); }
+    .space { flex:1 1 auto; }
+    /* Compat iOS: evitar zoom al enfocar inputs */
+    input, select, textarea { font-size:16px; }
+  </style>
 </head>
 <body>
   <div id="app" class="app"></div>
