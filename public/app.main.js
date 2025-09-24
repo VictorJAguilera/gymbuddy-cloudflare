@@ -6,6 +6,27 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 } else {
   window.__GB_APP_ALREADY_LOADED__ = true;
 
+  /* ---------- Bloqueo de zoom global (pinch/double-tap) ---------- */
+  (function(){
+    // Evita zoom por gesto (iOS Safari) y doble-tap. Complementa el meta viewport.
+    document.addEventListener('touchstart', function(e){
+      if (e.touches && e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('gesturestart', function(e){
+      e.preventDefault();
+    }, { passive: false });
+
+    var lastTouchTime = 0;
+    document.addEventListener('touchend', function(e){
+      var now = Date.now();
+      if (now - lastTouchTime <= 300) {
+        e.preventDefault();
+      }
+      lastTouchTime = now;
+    }, { passive: false });
+  })();
+
   /* ---------- Config / Estado ---------- */
   var API = (window.API_BASE || "").replace(/\/+$/, "");
   var Views = { HOME:"home", ROUTINES:"routines", EDIT:"edit", WORKOUT:"workout", MARKS:"marks" };
@@ -48,7 +69,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function $(s,r){ return (r||document).querySelector(s); }
   function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
   function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}); }
-  function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
+  function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;","&gt;":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
   function showFAB(b){ var f=FAB||document.getElementById("fab-add"); if(f) f.style.display=b?"grid":"none"; }
 
   // Beep + vibración al terminar
@@ -217,14 +238,50 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         + ((exs.length===0)
           ? '<section class="grid"><div class="empty card"><p><strong>Ningún ejercicio añadido aún.</strong></p><p>Usa “Añadir ejercicios”.</p></div></section>'
           : '<section class="grid">'+ exs.map(function(x){ return EditExerciseCard(r,x); }).join("") +'</section>')
-        + '<div class="row" style="justify-content:center;margin-top:14px">' +
-          '<button id="add-ex" class="btn secondary">Añadir ejercicios</button>' +
-          '<button id="save-routine" class="btn">Guardar cambios</button>' +
-        '</div><div class="footer-safe"></div>';
+        + '<div class="row" style="align-items:center;margin-top:14px">'
+          + '<div class="row" style="gap:8px">'
+            + '<button id="add-ex" class="btn secondary">Añadir ejercicios</button>'
+            + '<button id="save-routine" class="btn">Guardar cambios</button>'
+          + '</div>'
+          + '<div class="space"></div>'
+          + '<button id="delete-routine" class="btn danger">Eliminar rutina</button>'
+        + '</div>'
+        + '<div class="footer-safe"></div>';
 
       var back=$("#back-routines"); if(back) back.addEventListener("click", function(){ go(Views.ROUTINES); });
       var add=$("#add-ex"); if(add) add.addEventListener("click", function(){ openExercisePicker(r.id, function(){ renderEditRoutine(r.id); }); });
       var save=$("#save-routine"); if(save) save.addEventListener("click", function(){ var payload=collectRoutineFromDOM(r); api('/api/routines/'+r.id,{method:"PUT",body:JSON.stringify(payload)}).then(function(){ go(Views.ROUTINES); }); });
+
+      // *** Eliminar rutina: confirmación en modal ***
+      var del = $("#delete-routine");
+      if (del) del.addEventListener("click", function(){
+        showModal("Eliminar rutina",
+          '<div class="card">'
+            + '<p>¿Estas seguro de que deseas eliminar esta rutina?</p>'
+            + '<div class="row" style="justify-content:center;margin-top:10px;gap:8px">'
+              + '<button id="del-cancel" class="btn secondary">Cancelar</button>'
+              + '<button id="del-confirm" class="btn danger">Aceptar</button>'
+            + '</div>'
+          + '</div>',
+          function(){
+            var c = $("#del-cancel"); if (c) c.addEventListener("click", closeModal);
+            var ok = $("#del-confirm"); if (ok) ok.addEventListener("click", function(){
+              api('/api/routines/'+ r.id, { method: 'DELETE' })
+                .then(function(){
+                  closeModal();
+                  go(Views.ROUTINES);
+                })
+                .catch(function(err){
+                  showModal("Error",
+                    '<div class="card"><p>No se pudo eliminar.</p>'
+                    + '<p class="small">'+ escapeHtml(err.message) +'</p>'
+                    + '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
+                  );
+                });
+            });
+          }
+        );
+      });
     });
   }
 
