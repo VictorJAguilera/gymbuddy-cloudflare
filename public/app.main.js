@@ -5,7 +5,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 } else {
   window.__GB_APP_ALREADY_LOADED__ = true;
 
-  /* --------- Bloqueo de zoom global (pinch/double-tap) --------- */
+  /* ---------- Bloqueo de zoom global (pinch/double-tap) ---------- */
   (function(){
     document.addEventListener('touchstart', function(e){
       if (e.touches && e.touches.length > 1) e.preventDefault();
@@ -288,7 +288,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
             var ok = $("#del-confirm");
             if (ok) ok.addEventListener("click", function(){
               var rid = encodeURIComponent(r.id);
-              // desactiva botones mientras se intenta
               $("#del-confirm").disabled = true; $("#del-cancel").disabled = true;
 
               // Intento 1: POST /api/routines/:id/delete
