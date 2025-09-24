@@ -5,7 +5,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
 } else {
   window.__GB_APP_ALREADY_LOADED__ = true;
 
-  /* ---------- Bloqueo de zoom global (pinch/double-tap) ---------- */
+  /* --------- Bloqueo de zoom global (pinch/double-tap) --------- */
   (function(){
     document.addEventListener('touchstart', function(e){
       if (e.touches && e.touches.length > 1) e.preventDefault();
