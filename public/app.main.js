@@ -83,7 +83,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function $(s,r){ return (r||document).querySelector(s); }
   function $$(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
   function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}); }
-  function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
+  function escapeHtml(str){ str=(str==null?"":String(str)); return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;","&gt;":"&gt;",'"':"&quot;","'":"&#39;"})[m];}); }
   function showFAB(b){ var f=FAB||document.getElementById("fab-add"); if(f) f.style.display=b?"grid":"none"; }
 
   // Beep + vibración al terminar
@@ -265,7 +265,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       var add=$("#add-ex"); if(add) add.addEventListener("click", function(){ openExercisePicker(r.id, function(){ renderEditRoutine(r.id); }); });
       var save=$("#save-routine"); if(save) save.addEventListener("click", function(){ var payload=collectRoutineFromDOM(r); api('/api/routines/'+encodeURIComponent(r.id),{method:"PUT",body:JSON.stringify(payload)}).then(function(){ go(Views.ROUTINES); }); });
 
-      // Eliminar rutina con fallbacks
+      // Eliminar rutina: MISMA ESTRUCTURA QUE CREATE -> DELETE /api/routines con {id}
       var del = $("#delete-routine");
       if (del) del.addEventListener("click", function(){
         showModal("Eliminar rutina",
@@ -279,10 +279,15 @@ if (window.__GB_APP_ALREADY_LOADED__) {
           function(){
             var c = $("#del-cancel"); if (c) c.addEventListener("click", closeModal);
             var ok = $("#del-confirm"); if (ok) ok.addEventListener("click", function(){
-              deleteRoutine(r.id).then(function(){
+              api('/api/routines', {
+                method: 'DELETE',
+                body: JSON.stringify({ id: r.id })
+              })
+              .then(function(){
                 closeModal();
                 go(Views.ROUTINES);
-              }).catch(function(err){
+              })
+              .catch(function(err){
                 showModal("Error",
                   '<div class="card"><p>No se pudo eliminar.</p>'
                   + '<p class="small">'+ escapeHtml(err.message) +'</p>'
@@ -292,25 +297,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
             });
           }
         );
-      });
-    });
-  }
-
-  // Intento resistente para eliminar una rutina en distintos backends
-  function deleteRoutine(id){
-    var rid = encodeURIComponent(id);
-    // 1) DELETE /api/routines/:id
-    return api('/api/routines/' + rid, { method: 'DELETE' }).catch(function(err1){
-      // 2) DELETE /api/routines?id=:id
-      return api('/api/routines?id=' + rid, { method: 'DELETE' }).catch(function(err2){
-        // 3) POST override /api/routines/:id  {_method: 'DELETE'}
-        return api('/api/routines/' + rid, {
-          method: 'POST',
-          body: JSON.stringify({ _method: 'DELETE' })
-        }).catch(function(err3){
-          // 4) POST específico /api/routines/:id/delete
-          return api('/api/routines/' + rid + '/delete', { method: 'POST' });
-        });
       });
     });
   }
@@ -369,7 +355,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function openExercisePicker(routineId, onAfter){
     api("/api/exercises/groups").then(function(groups){
       showModal("Añadir ejercicios",
-        '<div class="row" style="gap:8px, margin-bottom:8px"><input id="search" class="input" placeholder="Buscar por nombre"></div>' +
+        '<div class="row" style="gap:8px; margin-bottom:8px"><input id="search" class="input" placeholder="Buscar por nombre"></div>' +
         '<div class="chips" id="chips"><span class="chip active" data-group="*">Todos</span>' + groups.map(function(g){ return '<span class="chip" data-group="'+ escapeHtml(g) +'">'+ escapeHtml(g) +'</span>'; }).join("") + '</div>' +
         '<div class="row" style="justify-content:space-between;align-items:center;margin:8px 0"><div class="small">Filtra por grupo o busca por texto</div><button id="new-ex" class="btn secondary">+ Crear ejercicio</button></div>' +
         '<div class="grid" id="ex-grid"></div>',
@@ -380,7 +366,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
               .then(function(list){
                 grid.innerHTML = list.map(function(e){
                   var img=e.image?'<img class="thumb" src="'+e.image+'" alt="'+escapeHtml(e.name)+'">':'<div class="thumb">🏋️</div>';
-                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
+                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px)">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
                 }).join("");
                 $$("[data-add]",grid).forEach(function(btn){
                   btn.addEventListener("click", function(){
@@ -789,24 +775,4 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function renderMarks(){
     showFAB(false);
     var left='<button class="back-btn" id="back-home-marks"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg><span>Inicio</span></button>';
-    api("/api/marks").then(function(marks){
-      var body=(!marks||marks.length===0)
-        ? '<div class="empty card"><p><strong>Todavía no hay marcas.</strong></p><p>Completa entrenamientos para ver tus PRs.</p></div>'
-        : '<section class="grid">' + marks.map(function(m){
-            var img=m.image?'<img class="thumb" src="'+m.image+'" alt="'+escapeHtml(m.name)+'">':'<div class="thumb">🏋️</div>';
-            return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 4px">'+escapeHtml(m.name)+'</h3><div class="small">'+escapeHtml(m.bodyPart||"")+'</div><div class="small">PR: <strong>'+m.pr_weight+'</strong> kg • Reps con PR: <strong>'+m.reps_at_pr+'</strong></div></div></div></article>';
-          }).join("") + '</section>';
-      appEl.innerHTML = headerShell(left) + body;
-      var bk=$("#back-home-marks"); if(bk) bk.addEventListener("click", function(){ go(Views.HOME); });
-    });
-  }
-
-  /* ---------- Boot ---------- */
-  function boot(){
-    appEl=$("#app"); if(!appEl) return;
-    FAB=$("#fab-add"); modalRoot=$("#modal-root"); modalTitle=$("#modal-title"); modalContent=$("#modal-content"); modalClose=$("#modal-close");
-    if(FAB) FAB.addEventListener("click", function(){ openCreateRoutine(); });
-    render();
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-}
+    api("/api/marks").t
