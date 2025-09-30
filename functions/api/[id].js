@@ -1,6 +1,6 @@
 // functions/api/routines/[id].ts
 
-export const onRequestDelete; PagesFunction<{ DB: D1Database }> = async (ctx) => {
+export const onRequestDelete: PagesFunction<{ DB: D1Database }> = async (ctx) => {
   const id = ctx.params.id as string;
 
   const res = await ctx.env.DB
