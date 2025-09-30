@@ -1,7 +1,7 @@
-// functions/api/routines/[id].ts
+// DELETE /api/routines/:id  → hard delete en D1 (tabla routines)
 
-export const onRequestDelete: PagesFunction<{ DB: D1Database }> = async (ctx) => {
-  const id = ctx.params.id as string;
+export const onRequestDelete = async (ctx) => {
+  const id = ctx.params.id;
 
   const res = await ctx.env.DB
     .prepare("DELETE FROM routines WHERE id = ?")
@@ -16,7 +16,8 @@ export const onRequestDelete: PagesFunction<{ DB: D1Database }> = async (ctx) =>
   });
 };
 
-export const onRequestOptions: PagesFunction = async () => {
+// OPTIONS (CORS preflight)
+export const onRequestOptions = async () => {
   return new Response(null, {
     status: 204,
     headers: {
