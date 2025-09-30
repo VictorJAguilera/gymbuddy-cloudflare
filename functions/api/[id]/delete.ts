@@ -1,7 +1,7 @@
-// POST /api/routines/:id/delete  → misma acción por POST
+// functions/api/routines/[id]/delete.ts
 
-export const onRequestPost = async (ctx) => {
-  const id = ctx.params.id;
+export const onRequestPost: PagesFunction<{ DB: D1Database }> = async (ctx) => {
+  const id = ctx.params.id as string;
 
   const res = await ctx.env.DB
     .prepare("DELETE FROM routines WHERE id = ?")
@@ -16,8 +16,7 @@ export const onRequestPost = async (ctx) => {
   });
 };
 
-// OPTIONS (CORS preflight)
-export const onRequestOptions = async () => {
+export const onRequestOptions: PagesFunction = async () => {
   return new Response(null, {
     status: 204,
     headers: {
