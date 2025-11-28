@@ -64,11 +64,11 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString(undefined,{day:"2-digit",month:"short"}); }
   function escapeHtml(str){
     str=(str==null?"":String(str));
-    return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m];});
+    return str.replace(/[&<>"']/g,function(m){return({"&":"&amp;","<":"&lt;","&gt;":"&gt;",'"':"&quot;","'":"&#39;"})[m];});
   }
   function showFAB(b){ var f=FAB||document.getElementById("fab-add"); if(f) f.style.display=b?"grid":"none"; }
 
-  // API robusta: soporta 204/Texto/JSON y muestra texto del servidor en errores
+  // API robusta
   function api(path, opts){
     opts = opts || {};
     var h = opts.headers || {};
@@ -117,7 +117,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     var prev = STATE.view;
     STATE.view = v;
     render();
-    // WakeLock on/off según vista
     if (prev !== Views.WORKOUT && v === Views.WORKOUT) requestWakeLock();
     if (prev === Views.WORKOUT && v !== Views.WORKOUT) releaseWakeLock();
   }
@@ -290,24 +289,12 @@ if (window.__GB_APP_ALREADY_LOADED__) {
               var rid = encodeURIComponent(r.id);
               $("#del-confirm").disabled = true; $("#del-cancel").disabled = true;
 
-              // Intento 1: POST /api/routines/:id/delete
               api('/api/routines/' + rid + '/delete', { method:'POST' })
-                .then(function(){
-                  var mc = $("#modal-content");
-                  if (mc) mc.insertAdjacentHTML('beforeend','<p class="small">✔ Borrado por <code>POST /api/routines/:id/delete</code></p>');
-                  closeModal();
-                  go(Views.ROUTINES);
-                })
+                .then(function(){ closeModal(); go(Views.ROUTINES); })
                 .catch(function(err){
-                  // Fallback: DELETE /api/routines/:id
                   if (/API 404|API 405/i.test(err.message)) {
                     return api('/api/routines/' + rid, { method:'DELETE' })
-                      .then(function(){
-                        var mc = $("#modal-content");
-                        if (mc) mc.insertAdjacentHTML('beforeend','<p class="small">✔ Borrado por <code>DELETE /api/routines/:id</code></p>');
-                        closeModal();
-                        go(Views.ROUTINES);
-                      });
+                      .then(function(){ closeModal(); go(Views.ROUTINES); });
                   }
                   throw err;
                 })
@@ -315,7 +302,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
                   showModal("Error al eliminar",
                     '<div class="card"><p>No se pudo eliminar la rutina.</p>'
                     + '<p class="small">'+escapeHtml(err2.message)+'</p>'
-                    + '<p class="small">El servidor no expone <code>POST /api/routines/:id/delete</code> ni <code>DELETE /api/routines/:id</code>.</p>'
                     + '<div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
                   );
                 })
@@ -340,7 +326,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     }).join("");
     return '<article class="card" data-rex="'+ x.id +'">' +
            '  <div class="exercise-card">'+ img +
-           '    <div class="info"><h3 style="margin:0 0 4px">'+ escapeHtml(ex.name||"Ejercicio") +'</h3><div class="small">'+ escapeHtml(ex.bodyPart||"—") +' • <span class="small">'+ escapeHtml(ex.equipment||"") +'</span></div></div>' +
+           '    <div class="info"><h3 style="margin:0 0 4px)">'+ escapeHtml(ex.name||"Ejercicio") +'</h3><div class="small">'+ escapeHtml(ex.bodyPart||"—") +' • <span class="small">'+ escapeHtml(ex.equipment||"") +'</span></div></div>' +
            '  </div>' +
            '  <div class="sets">'+ setsHTML +
            '    <div class="row"><button class="btn add-set">Añadir serie</button><button class="btn secondary remove-ex">Quitar ejercicio</button></div>' +
@@ -413,10 +399,23 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   }
 
   function openCreateExerciseForm(onSaved){
+    // estado local de la imagen subida (Data URL)
+    var uploadedDataURL = null;
+
     showModal("Crear ejercicio",
       '<div class="grid">' +
       '<div class="card"><label>Nombre</label><input id="ex-name" class="input" placeholder="p.ej. Dominadas pronas"></div>' +
-      '<div class="card"><label>URL de imagen</label><input id="ex-img" class="input" placeholder="https://..."></div>' +
+      '<div class="card"><label>Imagen</label>' +
+      '  <div class="uploader">' +
+      '    <input id="ex-file" type="file" accept="image/*" capture="environment" class="input-file">' +
+      '    <div class="uploader-row">' +
+      '      <input id="ex-img" class="input" placeholder="https://... (opcional si subes archivo)">' +
+      '      <span class="uploader-sep">o</span>' +
+      '      <label for="ex-file" class="btn secondary">Elegir archivo</label>' +
+      '    </div>' +
+      '    <div id="ex-preview" class="uploader-preview hidden"></div>' +
+      '  </div>' +
+      '</div>' +
       '<div class="card"><label>Grupo muscular primario</label><input id="ex-body" class="input" placeholder="p.ej. Espalda"></div>' +
       '<div class="card"><label>Músculos primarios</label><input id="ex-primary" class="input" placeholder="p.ej. Latissimus Dorsi"></div>' +
       '<div class="card"><label>Músculos secundarios</label><input id="ex-secondary" class="input" placeholder="p.ej. Bíceps Brachii"></div>' +
@@ -424,12 +423,54 @@ if (window.__GB_APP_ALREADY_LOADED__) {
       '</div>' +
       '<div class="row" style="margin-top:12px"><button id="save-custom-ex" class="btn">Guardar ejercicio</button><button id="cancel-custom-ex" class="btn secondary">Cancelar</button></div>',
       function(){
+        var fileInp = $("#ex-file");
+        var preview = $("#ex-preview");
+
+        function setPreview(src){
+          if (!preview) return;
+          if (src){
+            preview.innerHTML = '<img alt="preview" style="max-width:100%;height:auto;border-radius:12px" src="'+ src +'">';
+            preview.classList.remove("hidden");
+          } else {
+            preview.innerHTML = '';
+            preview.classList.add("hidden");
+          }
+        }
+
+        if (fileInp) {
+          fileInp.addEventListener("change", function(){
+            var f = fileInp.files && fileInp.files[0];
+            if (!f) { uploadedDataURL = null; setPreview(null); return; }
+            // Límite orientativo 5MB
+            if (f.size > 5*1024*1024) {
+              alert("La imagen supera 5MB. Por favor elige una más pequeña.");
+              fileInp.value = ""; uploadedDataURL = null; setPreview(null); return;
+            }
+            var reader = new FileReader();
+            reader.onload = function(e){
+              uploadedDataURL = String(e.target.result || "");
+              setPreview(uploadedDataURL);
+            };
+            reader.readAsDataURL(f);
+          });
+        }
+
         var save=$("#save-custom-ex");
         if(save) save.addEventListener("click", function(){
-          var payload={ name:$("#ex-name").value, image:$("#ex-img").value, bodyPart:$("#ex-body").value, primaryMuscles:$("#ex-primary").value, secondaryMuscles:$("#ex-secondary").value, equipment:$("#ex-eq").value };
+          var payload={
+            name:$("#ex-name").value,
+            image: uploadedDataURL || $("#ex-img").value, // archivo en base64 o URL
+            bodyPart:$("#ex-body").value,
+            primaryMuscles:$("#ex-primary").value,
+            secondaryMuscles:$("#ex-secondary").value,
+            equipment:$("#ex-eq").value
+          };
           if(!payload.name || !payload.name.trim()){ $("#ex-name").focus(); return; }
-          api("/api/exercises",{method:"POST",body:JSON.stringify(payload)}).then(function(){ closeModal(); if(typeof onSaved==="function") onSaved(); });
+          // Si no hay ni archivo ni URL, enviamos sin imagen (backend puede aceptarlo)
+          api("/api/exercises",{method:"POST",body:JSON.stringify(payload)})
+            .then(function(){ closeModal(); if(typeof onSaved==="function") onSaved(); });
         });
+
         var cancel=$("#cancel-custom-ex"); if(cancel) cancel.addEventListener("click", closeModal);
       }
     );
@@ -590,8 +631,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     STATE.rest = { active:true, targetIndex:targetIdx, totalMs:0, remainingMs:0, tick:null };
     var stage=$("#exercise-stage");
     stage.innerHTML = restHTML();
-
-    // presets
     $$(".rest-preset").forEach(function(b){
       b.addEventListener("click", function(){
         var sec=parseInt(b.getAttribute("data-sec"),10)||0;
@@ -771,7 +810,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     if(fg) fg.style.strokeDashoffset = String(offset);
   }
 
-  // Handlers de workout (incluye disparar descanso por serie)
+  // Handlers de workout
   function attachWorkoutHandlers(cardEl, item){
     for(var i=0;i<item.sets.length;i++){
       (function(st){
@@ -785,13 +824,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
           st.done=!st.done; tog.classList.toggle("complete", st.done);
           if(navigator && navigator.vibrate){ try{ navigator.vibrate(30); }catch(_){} }
           updateWorkoutHeader();
-
-          // Si se completa una serie, abre descanso entre series (modal)
-          if (st.done) {
-            openSetRestModal();
-          }
-
-          // Avance automático al siguiente ejercicio cuando TODAS las series estén hechas
+          if (st.done) openSetRestModal();
           checkAutoNext(STATE.workoutSession, item);
         });
       })(item.sets[i]);
