@@ -30,10 +30,8 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     currentRoutineId: null,
     workoutSession: null,
     stopwatchTimer: null,
-    // Descanso entre ejercicios (inline)
-    rest: { active:false, targetIndex:null, totalMs:0, remainingMs:0, tick:null },
-    // Descanso entre series (modal)
-    srest: { active:false, totalMs:0, remainingMs:0, tick:null }
+    rest: { active:false, targetIndex:null, totalMs:0, remainingMs:0, tick:null }, // descanso entre ejercicios
+    srest: { active:false, totalMs:0, remainingMs:0, tick:null } // descanso entre series
   };
 
   /* ---------- Wake Lock ---------- */
@@ -72,7 +70,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function api(path, opts){
     opts = opts || {};
     var h = opts.headers || {};
-    if (!('Content-Type' in h) && opts.method && opts.method !== 'GET' && opts.body != null && typeof opts.body === 'object') {
+    if (!('Content-Type' in h) && opts.method && opts.method !== 'GET' && opts.body != null && typeof opts.body === 'object' && !(opts.body instanceof FormData)) {
       h["Content-Type"]="application/json";
     }
     var o={}; for(var k in opts) o[k]=opts[k];
@@ -248,7 +246,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     );
   }
 
-  /* ---------- EDITAR RUTINA (incluye borrado con fallback POST/DELETE) ---------- */
+  /* ---------- EDITAR RUTINA (incluye borrado) ---------- */
   function renderEditRoutine(routineId){
     showFAB(false);
     api('/api/routines/'+encodeURIComponent(routineId)).then(function(r){
@@ -379,7 +377,7 @@ if (window.__GB_APP_ALREADY_LOADED__) {
               .then(function(list){
                 grid.innerHTML = list.map(function(e){
                   var img=e.image?'<img class="thumb" src="'+e.image+'" alt="'+escapeHtml(e.name)+'">':'<div class="thumb">🏋️</div>';
-                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
+                  return '<article class="card list"><div class="exercise-card">'+img+'<div class="info"><h3 style="margin:0 0 6px)">'+escapeHtml(e.name)+'</h3><div class="small">'+escapeHtml(e.bodyPart||"")+' • <span class="small">'+escapeHtml(e.equipment||"")+'</span></div><div class="small">'+escapeHtml(e.primaryMuscles||"")+(e.secondaryMuscles?' • '+escapeHtml(e.secondaryMuscles):'')+'</div></div><div class="row"><button class="btn" data-add="'+e.id+'">Añadir</button></div></div></article>';
                 }).join("");
                 $$("[data-add]",grid).forEach(function(btn){
                   btn.addEventListener("click", function(){
@@ -398,10 +396,9 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     });
   }
 
+  /* ---------- CREAR EJERCICIO (con subida real a /api/uploads) ---------- */
   function openCreateExerciseForm(onSaved){
-    // estado local de la imagen subida (Data URL)
-    var uploadedDataURL = null;
-
+    var uploadedFile = null;
     showModal("Crear ejercicio",
       '<div class="grid">' +
       '<div class="card"><label>Nombre</label><input id="ex-name" class="input" placeholder="p.ej. Dominadas pronas"></div>' +
@@ -440,35 +437,52 @@ if (window.__GB_APP_ALREADY_LOADED__) {
         if (fileInp) {
           fileInp.addEventListener("change", function(){
             var f = fileInp.files && fileInp.files[0];
-            if (!f) { uploadedDataURL = null; setPreview(null); return; }
-            // Límite orientativo 5MB
-            if (f.size > 5*1024*1024) {
-              alert("La imagen supera 5MB. Por favor elige una más pequeña.");
-              fileInp.value = ""; uploadedDataURL = null; setPreview(null); return;
+            uploadedFile = f || null;
+            if (!f) { setPreview(null); return; }
+            if (f.size > 8*1024*1024) { // 8MB tope razonable
+              alert("La imagen supera 8MB. Elige una más pequeña.");
+              fileInp.value = ""; uploadedFile = null; setPreview(null); return;
             }
             var reader = new FileReader();
-            reader.onload = function(e){
-              uploadedDataURL = String(e.target.result || "");
-              setPreview(uploadedDataURL);
-            };
+            reader.onload = function(e){ setPreview(String(e.target.result || "")); };
             reader.readAsDataURL(f);
           });
         }
 
         var save=$("#save-custom-ex");
-        if(save) save.addEventListener("click", function(){
-          var payload={
-            name:$("#ex-name").value,
-            image: uploadedDataURL || $("#ex-img").value, // archivo en base64 o URL
-            bodyPart:$("#ex-body").value,
-            primaryMuscles:$("#ex-primary").value,
-            secondaryMuscles:$("#ex-secondary").value,
-            equipment:$("#ex-eq").value
-          };
-          if(!payload.name || !payload.name.trim()){ $("#ex-name").focus(); return; }
-          // Si no hay ni archivo ni URL, enviamos sin imagen (backend puede aceptarlo)
-          api("/api/exercises",{method:"POST",body:JSON.stringify(payload)})
-            .then(function(){ closeModal(); if(typeof onSaved==="function") onSaved(); });
+        if(save) save.addEventListener("click", async function(){
+          var name = ($("#ex-name").value||"").trim();
+          if(!name){ $("#ex-name").focus(); return; }
+
+          var imageUrl = ($("#ex-img").value||"").trim();
+
+          try{
+            // Si hay archivo, súbelo primero a /api/uploads
+            if (uploadedFile){
+              var fd = new FormData();
+              fd.append("file", uploadedFile, uploadedFile.name || "image");
+              var up = await api("/api/uploads", { method:"POST", body: fd });
+              if (!up || !up.url) throw new Error("No se recibió URL de la subida");
+              imageUrl = up.url;
+            }
+
+            var payload={
+              name: name,
+              image: imageUrl || null,
+              bodyPart:$("#ex-body").value,
+              primaryMuscles:$("#ex-primary").value,
+              secondaryMuscles:$("#ex-secondary").value,
+              equipment:$("#ex-eq").value
+            };
+
+            await api("/api/exercises",{method:"POST",body:JSON.stringify(payload)});
+            closeModal();
+            if(typeof onSaved==="function") onSaved();
+          } catch(err){
+            showModal("Error creando ejercicio",
+              '<div class="card"><p>No se pudo crear el ejercicio.</p><p class="small">'+escapeHtml(err.message)+'</p><div class="row" style="justify-content:center;margin-top:10px"><button class="btn" data-close="true">Cerrar</button></div></div>'
+            );
+          }
         });
 
         var cancel=$("#cancel-custom-ex"); if(cancel) cancel.addEventListener("click", closeModal);
@@ -501,7 +515,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   function completedSetsCount(sess){ return sess.items.reduce(function(a,it){ return a + it.sets.filter(function(s){return !!s.done;}).length; },0); }
   function maxSetsCount(sess){ return sess.items.reduce(function(a,it){ return a + it.sets.length; },0) || 1; }
 
-  /* Header y nav */
   function workoutHeader(){
     var s=STATE.workoutSession, totalSets=maxSetsCount(s), done=completedSetsCount(s), pct=Math.round(100*done/Math.max(1,totalSets));
     var left='<button class="back-btn" id="back-routines-wo"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M15 19l-7-7 7-7"/></svg><span>Mis rutinas</span></button>';
@@ -516,12 +529,11 @@ if (window.__GB_APP_ALREADY_LOADED__) {
            '  <button class="navline-btn" id="nav-next" aria-label="Siguiente"><svg width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M9 5l7 7-7 7"/></svg></button>' +
            '</div>';
   }
-
   function workoutCardHTML(item, idx, total){
     return '<article class="card workout-card" data-index="'+idx+'">' +
            '  <div class="exercise-card">'+
            (item.image?'<img class="thumb" src="'+item.image+'" alt="'+escapeHtml(item.name)+'">':'<div class="thumb">🏋️</div>')+
-           '    <div class="info"><h3 style="margin:0 0 6px">'+escapeHtml(item.name)+'</h3><div class="small">'+escapeHtml(item.bodyPart||"")+'</div></div>' +
+           '    <div class="info"><h3 style="margin:0 0 6px)">'+escapeHtml(item.name)+'</h3><div class="small">'+escapeHtml(item.bodyPart||"")+'</div></div>' +
            '  </div>' +
            '  <div class="sets">' +
            item.sets.map(function(s){
@@ -653,7 +665,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
     renderRestTime();
   }
 
-  // Cuenta atrás entre ejercicios
   function startRest(totalMs){
     stopRest(true);
     STATE.rest.active = true;
@@ -674,7 +685,6 @@ if (window.__GB_APP_ALREADY_LOADED__) {
   }
   function stopRest(cancelOnly){
     if(STATE.rest.tick){ clearInterval(STATE.rest.tick); STATE.rest.tick=null; }
-    if(cancelOnly){ /* noop */ }
     STATE.rest.active=false;
   }
   function renderRestTime(){
